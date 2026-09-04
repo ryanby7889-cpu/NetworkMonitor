@@ -2,8 +2,8 @@
 
 $activeMenu = 'alarm';
 
-require_once __DIR__ . "/../config/database.php";
-require_once __DIR__ . "/../config/mikrotik.php";
+require_once __DIR__ . "/../Config/database.php";
+require_once __DIR__ . "/../Config/mikrotik.php";
 require_once __DIR__ . "/../library/routeros_api.class.php";
 require_once __DIR__ . "/alarm_engine.php";
 
@@ -72,24 +72,9 @@ $totalHistory = count($alarmHistory);
     </div>
 
     <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="card stat-card">
-                <div class="stat-title">Active Alarm</div>
-                <div class="stat-value text-danger"><?= $totalActive ?></div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card stat-card">
-                <div class="stat-title">Alarm History</div>
-                <div class="stat-value"><?= $totalHistory ?></div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card stat-card">
-                <div class="stat-title">Monitoring</div>
-                <div id="monitoringStatus" class="stat-value text-success">CHECKING...</div>
-            </div>
-        </div>
+        <div class="col-md-4"><div class="card stat-card"><div class="stat-title">Active Alarm</div><div class="stat-value text-danger"><?= $totalActive ?></div></div></div>
+        <div class="col-md-4"><div class="card stat-card"><div class="stat-title">Alarm History</div><div class="stat-value"><?= $totalHistory ?></div></div></div>
+        <div class="col-md-4"><div class="card stat-card"><div class="stat-title">Monitoring</div><div id="monitoringStatus" class="stat-value text-success">CHECKING...</div></div></div>
     </div>
 
     <div class="card mb-4">
@@ -98,69 +83,45 @@ $totalHistory = count($alarmHistory);
 <?php if ($totalActive == 0): ?>
             <div class="alert alert-success">🟢 Tidak ada alarm aktif. Semua kondisi jaringan normal.</div>
 <?php else: ?>
-            <div class="table-responsive">
-                <table class="table">
-                    <thead><tr><th>Interface</th><th>Alarm</th><th>Severity</th><th>Value</th><th>Threshold</th><th>Message</th><th>Waktu</th></tr></thead>
-                    <tbody>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>Interface</th><th>Alarm</th><th>Severity</th><th>Value</th><th>Threshold</th><th>Message</th><th>Waktu</th></tr></thead>
+                <tbody>
 <?php foreach ($activeAlarms as $alarm): ?>
-                        <tr class="alarm-card">
-                            <td><strong><?= htmlspecialchars($alarm['interface_name']) ?></strong></td>
-                            <td><?= htmlspecialchars($alarm['alarm_type']) ?></td>
-                            <td>
-<?php if ($alarm['severity'] === 'critical'): ?>
-                                <span class="badge badge-critical">CRITICAL</span>
-<?php else: ?>
-                                <span class="badge badge-warning">WARNING</span>
-<?php endif; ?>
-                            </td>
-                            <td><span class="value"><?= number_format((float)$alarm['value'], 2) ?> Mbps</span></td>
-                            <td><?= number_format((float)$alarm['threshold'], 2) ?> Mbps</td>
-                            <td class="message"><?= htmlspecialchars($alarm['message']) ?></td>
-                            <td><?= htmlspecialchars($alarm['created_at']) ?></td>
-                        </tr>
+                    <tr class="alarm-card">
+                        <td><strong><?= htmlspecialchars($alarm['interface_name']) ?></strong></td>
+                        <td><?= htmlspecialchars($alarm['alarm_type']) ?></td>
+                        <td><?php if ($alarm['severity'] === 'critical'): ?><span class="badge badge-critical">CRITICAL</span><?php else: ?><span class="badge badge-warning">WARNING</span><?php endif; ?></td>
+                        <td><span class="value"><?= number_format((float)$alarm['value'], 2) ?> Mbps</span></td>
+                        <td><?= number_format((float)$alarm['threshold'], 2) ?> Mbps</td>
+                        <td class="message"><?= htmlspecialchars($alarm['message']) ?></td>
+                        <td><?= htmlspecialchars($alarm['created_at']) ?></td>
+                    </tr>
 <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table></div>
 <?php endif; ?>
         </div>
     </div>
 
     <div class="card">
         <div class="card-header bg-white border-0 p-4"><h5 class="mb-0">📋 Alarm History</h5></div>
-        <div class="card-body pt-0">
-            <div class="table-responsive">
-                <table class="table">
-                    <thead><tr><th>Interface</th><th>Alarm</th><th>Severity</th><th>Value</th><th>Threshold</th><th>Status</th><th>Created</th><th>Resolved</th></tr></thead>
-                    <tbody>
+        <div class="card-body pt-0"><div class="table-responsive"><table class="table">
+            <thead><tr><th>Interface</th><th>Alarm</th><th>Severity</th><th>Value</th><th>Threshold</th><th>Status</th><th>Created</th><th>Resolved</th></tr></thead>
+            <tbody>
 <?php foreach ($alarmHistory as $alarm): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($alarm['interface_name']) ?></td>
-                            <td><?= htmlspecialchars($alarm['alarm_type']) ?></td>
-                            <td>
-<?php if ($alarm['severity'] === 'critical'): ?>
-                                <span class="badge badge-critical">CRITICAL</span>
-<?php else: ?>
-                                <span class="badge badge-warning">WARNING</span>
-<?php endif; ?>
-                            </td>
-                            <td><?= number_format((float)$alarm['value'], 2) ?> Mbps</td>
-                            <td><?= number_format((float)$alarm['threshold'], 2) ?> Mbps</td>
-                            <td>
-<?php if ($alarm['status'] === 'active'): ?>
-                                <span class="badge badge-active">ACTIVE</span>
-<?php else: ?>
-                                <span class="badge badge-resolved">RESOLVED</span>
-<?php endif; ?>
-                            </td>
-                            <td><?= htmlspecialchars($alarm['created_at']) ?></td>
-                            <td><?= !empty($alarm['resolved_at']) ? htmlspecialchars($alarm['resolved_at']) : '-' ?></td>
-                        </tr>
+                <tr>
+                    <td><?= htmlspecialchars($alarm['interface_name']) ?></td>
+                    <td><?= htmlspecialchars($alarm['alarm_type']) ?></td>
+                    <td><?php if ($alarm['severity'] === 'critical'): ?><span class="badge badge-critical">CRITICAL</span><?php else: ?><span class="badge badge-warning">WARNING</span><?php endif; ?></td>
+                    <td><?= number_format((float)$alarm['value'], 2) ?> Mbps</td>
+                    <td><?= number_format((float)$alarm['threshold'], 2) ?> Mbps</td>
+                    <td><?php if ($alarm['status'] === 'active'): ?><span class="badge badge-active">ACTIVE</span><?php else: ?><span class="badge badge-resolved">RESOLVED</span><?php endif; ?></td>
+                    <td><?= htmlspecialchars($alarm['created_at']) ?></td>
+                    <td><?= !empty($alarm['resolved_at']) ? htmlspecialchars($alarm['resolved_at']) : '-' ?></td>
+                </tr>
 <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            </tbody>
+        </table></div></div>
     </div>
 </div>
 </main>
