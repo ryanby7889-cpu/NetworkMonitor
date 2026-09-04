@@ -1,12 +1,12 @@
 <?php
 
-require_once "../config/database.php";
+require_once "../Config/database.php";
 
 $db = new Database();
 $pdo = $db->connect();
 
 $start = $_GET['start'] ?? date('Y-m-d');
-$end   = $_GET['end'] ?? date('Y-m-d');
+$end = $_GET['end'] ?? date('Y-m-d');
 
 $sql = "
     SELECT
@@ -25,41 +25,20 @@ $sql = "
 ";
 
 $stmt = $pdo->prepare($sql);
-
 $stmt->execute([
     ':start' => $start,
-    ':end'   => $end
+    ':end' => $end
 ]);
 
-$filename =
-    "traffic_history_"
-    . $start
-    . "_"
-    . $end
-    . ".csv";
+$filename = "traffic_history_" . $start . "_" . $end . ".csv";
 
 header('Content-Type: text/csv; charset=utf-8');
-
-header(
-    'Content-Disposition: attachment; filename="' .
-    $filename .
-    '"'
-);
+header('Content-Disposition: attachment; filename="' . $filename . '"');
 
 $output = fopen('php://output', 'w');
-
-
-// UTF-8 BOM untuk Excel
-fprintf(
-    $output,
-    chr(0xEF) . chr(0xBB) . chr(0xBF)
-);
-
-
-// HEADER
+fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
 fputcsv($output, [
-
     'Time',
     'Interface',
     'Download (Mbps)',
@@ -69,39 +48,21 @@ fputcsv($output, [
     'CPU (%)',
     'Memory (%)',
     'Disk (%)'
-
 ], ';');
 
-
-// DATA
-
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-
     fputcsv($output, [
-
         $row['created_at'],
-
         $row['interface_name'],
-
         $row['download_mbps'],
-
         $row['upload_mbps'],
-
         $row['rx_packet'],
-
         $row['tx_packet'],
-
         $row['cpu'],
-
         $row['memory'],
-
         $row['disk']
-
     ], ';');
-
 }
 
-
 fclose($output);
-
 exit;
