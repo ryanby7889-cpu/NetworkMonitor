@@ -1,0 +1,1 @@
+# Alarm modularization\n\nAlarm uses variables.css, common.css, and alarm.css. Existing alarm logic is preserved.\n

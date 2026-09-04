@@ -1,0 +1,37 @@
+/* Traffic History — page-specific styles */
+.traffic-page { min-width:0; }
+.filter-box {
+    background:var(--surface, #fff);
+    border:1px solid var(--border, #e5e7eb);
+    border-radius:var(--radius-md, 12px);
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:var(--shadow-card, 0 5px 20px rgba(15,23,42,.05));
+}
+.filter-box .form-label { margin-bottom:6px; font-weight:600; }
+.traffic-chart-card {
+    background:var(--surface, #fff);
+    border:1px solid var(--border, #e5e7eb);
+    border-radius:var(--radius-md, 12px);
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:var(--shadow-card, 0 5px 20px rgba(15,23,42,.05));
+}
+.chart-container { position:relative; height:380px; width:100%; }
+.badge-interface {
+    background:#dbeafe;
+    color:#1d4ed8;
+    padding:6px 10px;
+    border-radius:8px;
+    font-weight:600;
+    display:inline-block;
+}
+.download { color:#2563eb; font-weight:700; }
+.upload { color:#059669; font-weight:700; }
+.traffic-table { width:100%; }
+.traffic-table th { white-space:nowrap; }
+.traffic-table td { vertical-align:middle; }
+@media (max-width: 768px) {
+    .filter-box { padding:15px; }
+    .chart-container { height:300px; }
+}

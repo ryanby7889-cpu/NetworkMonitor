@@ -1,0 +1,100 @@
+/* =====================================================
+   NETMONITOR PRO - DESIGN TOKENS
+   Centralized colors, spacing, sizing and effects
+===================================================== */
+
+:root {
+    /* Base */
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+
+    /* Brand / status */
+    --primary: #0d6efd;
+    --success: #20c997;
+    --danger: #dc3545;
+    --warning: #f59e0b;
+    --info: #0ea5e9;
+
+    /* Sidebar */
+    --sidebar-width: 220px;
+    --sidebar-width-collapsed: 70px;
+    --sidebar-bg-start: #0f172a;
+    --sidebar-bg-end: #111827;
+    --sidebar-text: #cbd5e1;
+    --sidebar-muted: #94a3b8;
+    --sidebar-active: #1e293b;
+
+    /* Typography */
+    --font-family: Inter, "Segoe UI", Arial, sans-serif;
+    --font-size-base: 14px;
+
+    /* Radius */
+    --radius-sm: 9px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+
+    /* Shadows */
+    --shadow-card: 0 5px 20px rgba(15, 23, 42, .05);
+    --shadow-hover: 0 8px 24px rgba(15, 23, 42, .08);
+
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Layout */
+    --page-padding: 30px;
+    --page-padding-mobile: 18px;
+    --transition-fast: .2s ease;
+}
+
+
+/* =====================================================
+   GLOBAL THEME
+   Shared light / dark palette used across every page.
+===================================================== */
+html { color-scheme: light; }
+body {
+    transition: background-color .2s ease, color .2s ease;
+}
+
+html.theme-dark,
+body.dark {
+    color-scheme: dark;
+
+    --bg: #0b1120;
+    --card: #111827;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: #1e293b;
+
+    --sidebar-bg-start: #020617;
+    --sidebar-bg-end: #0f172a;
+    --sidebar-text: #cbd5e1;
+    --sidebar-muted: #94a3b8;
+    --sidebar-active: #1e293b;
+
+    /* Legacy billing tokens */
+    --billing-side: #020617;
+    --billing-active: #1e293b;
+    --billing-text: #f1f5f9;
+    --billing-muted: #94a3b8;
+    --billing-bg: #0b1120;
+    --billing-border: #1e293b;
+
+    /* Legacy billing dashboard tokens */
+    --bd-bg: #0b1120;
+    --bd-card: #111827;
+    --bd-text: #f1f5f9;
+    --bd-muted: #94a3b8;
+    --bd-border: #1e293b;
+    --bd-sidebar: #020617;
+    --bd-sidebar-active: #1e293b;
+}

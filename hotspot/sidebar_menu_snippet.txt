@@ -1,0 +1,1 @@
+Tambahkan pada sidebar utama setelah PPPoE:\n\n<a class="menu-item" href="../hotspot/"><i class="bi bi-wifi"></i><span>Hotspot</span></a>\n

@@ -1,0 +1,178 @@
+/* =========================================================
+   NetMonitor Sprint 3.0
+   Billing inline suspend control
+   CSS TERPISAH
+   ========================================================= */
+
+.billing-s30-panel {
+    margin: 18px 0;
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(20,40,70,.04);
+}
+
+.billing-s30-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:15px;
+    margin-bottom:15px;
+}
+
+.billing-s30-head h3 {
+    margin:0 0 4px;
+    font-size:17px;
+    color:#07142e;
+}
+
+.billing-s30-head p {
+    margin:0;
+    color:#60708c;
+    font-size:11px;
+}
+
+.billing-s30-badge {
+    display:inline-flex;
+    align-items:center;
+    padding:5px 9px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:800;
+    background:#fff0c7;
+    color:#986b00;
+}
+
+.billing-s30-badge.live {
+    background:#d9f1e6;
+    color:#08774e;
+}
+
+.billing-s30-controls {
+    display:flex;
+    align-items:end;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.billing-s30-field {
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    font-size:11px;
+    font-weight:700;
+}
+
+.billing-s30-field input {
+    width:100px;
+    padding:8px 9px;
+    border:1px solid #b9c5d6;
+    border-radius:7px;
+    outline:none;
+}
+
+.billing-s30-btn {
+    border:0;
+    border-radius:7px;
+    padding:9px 13px;
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.billing-s30-btn:disabled {
+    opacity:.5;
+    cursor:not-allowed;
+}
+
+.billing-s30-btn.check {
+    background:#f4b400;
+    color:#171717;
+}
+
+.billing-s30-btn.live {
+    background:#e3344b;
+    color:#fff;
+}
+
+.billing-s30-btn.audit {
+    background:#e8eef7;
+    color:#17233a;
+    text-decoration:none;
+}
+
+.billing-s30-info {
+    margin-top:12px;
+    padding:10px 12px;
+    border-radius:8px;
+    background:#f5f8fc;
+    color:#52627b;
+    font-size:11px;
+}
+
+.billing-s30-info.success {
+    background:#e8f7ef;
+    color:#13724d;
+}
+
+.billing-s30-info.error {
+    background:#fff0f1;
+    color:#c6283d;
+}
+
+.billing-s30-table-wrap {
+    display:none;
+    margin-top:14px;
+    overflow:auto;
+    border:1px solid #e2e8f1;
+    border-radius:8px;
+}
+
+.billing-s30-table {
+    width:100%;
+    min-width:760px;
+    border-collapse:collapse;
+    font-size:11px;
+}
+
+.billing-s30-table th {
+    background:#f5f8fc;
+    color:#53657f;
+    text-align:left;
+}
+
+.billing-s30-table th,
+.billing-s30-table td {
+    padding:9px;
+    border-bottom:1px solid #e6ebf2;
+    white-space:nowrap;
+}
+
+.billing-s30-table tr:last-child td {
+    border-bottom:0;
+}
+
+.billing-s30-overdue {
+    display:inline-block;
+    padding:3px 7px;
+    border-radius:999px;
+    background:#ffe1e5;
+    color:#c6283d;
+    font-weight:700;
+}
+
+@media(max-width:700px) {
+    .billing-s30-controls {
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .billing-s30-field input {
+        width:100%;
+    }
+
+    .billing-s30-btn {
+        width:100%;
+    }
+}

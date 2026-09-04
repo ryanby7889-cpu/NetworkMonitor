@@ -1,0 +1,23 @@
+
+/* =========================================================
+   SPRINT 2.2 - BILLING DETAIL VIEW
+   ========================================================= */
+.detail-profile{display:flex;align-items:center;gap:16px;margin-top:0}
+.detail-profile-icon{width:62px;height:62px;border-radius:15px;display:grid;place-items:center;background:#eef5ff;color:#087cff;font-size:30px;flex:0 0 auto}
+.detail-profile-main{flex:1;min-width:0}
+.detail-overline{font-size:9px;font-weight:800;letter-spacing:1px;color:#8a98ad;margin-bottom:4px}
+.detail-profile-main h2{margin:0 0 8px;font-size:22px}
+.detail-meta{display:flex;flex-wrap:wrap;gap:12px;color:#60708c;font-size:12px}
+.detail-meta i{color:#087cff}
+.detail-profile-status{text-align:right}
+.detail-profile-status small{display:block;margin-top:7px;color:#718198;font-size:10px}
+.detail-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:18px}
+.detail-danger{color:#d12d43}
+.detail-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.detail-info-grid>div{padding:11px 12px;background:#f7f9fc;border-radius:9px}
+.detail-info-grid small{display:block;color:#718198;font-size:10px;margin-bottom:5px}
+.detail-info-grid strong{font-size:13px;word-break:break-word}
+.detail-full{grid-column:1/-1}
+.smart-detail-selected{background:#eef6ff!important;box-shadow:inset 3px 0 #087cff}
+@media(max-width:950px){.detail-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.detail-profile{align-items:flex-start;flex-wrap:wrap}.detail-profile-status{margin-left:78px;text-align:left}.detail-kpis,.detail-info-grid{grid-template-columns:1fr}.detail-full{grid-column:auto}.detail-meta{flex-direction:column;gap:5px}}

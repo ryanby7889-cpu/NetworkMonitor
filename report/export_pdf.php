@@ -1,0 +1,341 @@
+<?php
+
+require_once "../config/database.php";
+require_once "../vendor/autoload.php";
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+$db = new Database();
+$pdo = $db->connect();
+
+/*
+|--------------------------------------------------------------------------
+| Ambil periode
+|--------------------------------------------------------------------------
+*/
+
+$start = $_GET['start'] ?? date('Y-m-d');
+$end   = $_GET['end'] ?? date('Y-m-d');
+
+/*
+|--------------------------------------------------------------------------
+| Traffic History
+|--------------------------------------------------------------------------
+*/
+
+$sql = "
+    SELECT
+        created_at,
+        interface_name,
+        download_mbps,
+        upload_mbps,
+        rx_packet,
+        tx_packet,
+        cpu,
+        memory,
+        disk
+    FROM traffic_history
+    WHERE DATE(created_at) BETWEEN :start AND :end
+    ORDER BY created_at ASC
+";
+
+$stmt = $pdo->prepare($sql);
+
+$stmt->execute([
+    ':start' => $start,
+    ':end'   => $end
+]);
+
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+/*
+|--------------------------------------------------------------------------
+| Statistik
+|--------------------------------------------------------------------------
+*/
+
+$totalRecords = count($rows);
+
+$avgDownload = 0;
+$avgUpload   = 0;
+$peakDownload = 0;
+$peakUpload   = 0;
+$avgCpu       = 0;
+
+if ($totalRecords > 0) {
+
+    $downloadValues = array_column($rows, 'download_mbps');
+    $uploadValues   = array_column($rows, 'upload_mbps');
+    $cpuValues      = array_column($rows, 'cpu');
+
+    $avgDownload = array_sum($downloadValues) / $totalRecords;
+    $avgUpload   = array_sum($uploadValues) / $totalRecords;
+
+    $peakDownload = max($downloadValues);
+    $peakUpload   = max($uploadValues);
+
+    $avgCpu = array_sum($cpuValues) / $totalRecords;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Alarm
+|--------------------------------------------------------------------------
+*/
+
+$sqlAlarm = "
+    SELECT COUNT(*) AS total
+    FROM alarms
+    WHERE DATE(created_at) BETWEEN :start AND :end
+";
+
+$stmtAlarm = $pdo->prepare($sqlAlarm);
+
+$stmtAlarm->execute([
+    ':start' => $start,
+    ':end'   => $end
+]);
+
+$totalAlarm = $stmtAlarm->fetchColumn();
+
+/*
+|--------------------------------------------------------------------------
+| HTML PDF
+|--------------------------------------------------------------------------
+*/
+
+$html = '
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<meta charset="UTF-8">
+
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/common.css">
+<link rel="stylesheet" href="../assets/css/report_pdf.css">
+
+</head>
+
+<body>
+
+<div class="header">
+
+<h1>NetMonitor</h1>
+
+<p>Traffic Performance Report</p>
+
+<p>
+Period:
+<strong>' . htmlspecialchars($start) . '</strong>
+ →
+<strong>' . htmlspecialchars($end) . '</strong>
+</p>
+
+</div>
+
+<table class="cards">
+
+<tr>
+
+<td class="card">
+
+<div class="card-title">
+Monitoring Records
+</div>
+
+<div class="card-value">
+' . $totalRecords . '
+</div>
+
+</td>
+
+<td class="card">
+
+<div class="card-title">
+Average Download
+</div>
+
+<div class="card-value blue">
+' . number_format($avgDownload, 2) . ' Mbps
+</div>
+
+</td>
+
+<td class="card">
+
+<div class="card-title">
+Average Upload
+</div>
+
+<div class="card-value green">
+' . number_format($avgUpload, 2) . ' Mbps
+</div>
+
+</td>
+
+<td class="card">
+
+<div class="card-title">
+Total Alarm
+</div>
+
+<div class="card-value red">
+' . $totalAlarm . '
+</div>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td class="card">
+
+<div class="card-title">
+Peak Download
+</div>
+
+<div class="card-value blue">
+' . number_format($peakDownload, 2) . ' Mbps
+</div>
+
+</td>
+
+<td class="card">
+
+<div class="card-title">
+Peak Upload
+</div>
+
+<div class="card-value green">
+' . number_format($peakUpload, 2) . ' Mbps
+</div>
+
+</td>
+
+<td class="card">
+
+<div class="card-title">
+Average CPU
+</div>
+
+<div class="card-value">
+' . number_format($avgCpu, 1) . ' %
+</div>
+
+</td>
+
+<td class="card">
+
+<div class="card-title">
+Interface
+</div>
+
+<div class="card-value">
+ether1
+</div>
+
+</td>
+
+</tr>
+
+</table>
+
+<h3>Traffic History</h3>
+
+<table class="history">
+
+<tr>
+
+<th>Time</th>
+<th>Interface</th>
+<th>Download</th>
+<th>Upload</th>
+<th>RX Packet</th>
+<th>TX Packet</th>
+<th>CPU</th>
+
+</tr>
+';
+
+foreach ($rows as $row) {
+
+    $html .= '
+
+    <tr>
+
+    <td>
+    ' . htmlspecialchars($row['created_at']) . '
+    </td>
+
+    <td>
+    ' . htmlspecialchars($row['interface_name']) . '
+    </td>
+
+    <td>
+    ' . number_format((float)$row['download_mbps'], 2) . ' Mbps
+    </td>
+
+    <td>
+    ' . number_format((float)$row['upload_mbps'], 2) . ' Mbps
+    </td>
+
+    <td>
+    ' . number_format((int)$row['rx_packet']) . '
+    </td>
+
+    <td>
+    ' . number_format((int)$row['tx_packet']) . '
+    </td>
+
+    <td>
+    ' . number_format((float)$row['cpu'], 1) . ' %
+    </td>
+
+    </tr>
+
+    ';
+}
+
+$html .= '
+
+</table>
+
+<div class="footer">
+
+Generated by Network Monitor
+
+</div>
+
+</body>
+
+</html>
+';
+
+/*
+|--------------------------------------------------------------------------
+| Generate PDF
+|--------------------------------------------------------------------------
+*/
+
+$options = new Options();
+
+$options->set('isRemoteEnabled', true);
+
+$dompdf = new Dompdf($options);
+
+$dompdf->loadHtml($html);
+
+$dompdf->setPaper('A4', 'landscape');
+
+$dompdf->render();
+
+$filename = 'traffic_report_' . $start . '_' . $end . '.pdf';
+
+$dompdf->stream($filename, [
+    'Attachment' => true
+]);

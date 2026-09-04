@@ -1,0 +1,154 @@
+/* Page-specific styles */
+
+/* CARD */
+
+.settings-card {
+
+    background: white;
+
+    border-radius: 16px;
+
+    padding: 30px;
+
+    box-shadow:
+        0 5px 20px
+        rgba(0,0,0,.05);
+
+    max-width: 900px;
+
+}
+
+
+.setting-row {
+
+    padding:
+        18px 0;
+
+    border-bottom:
+        1px solid #e5e7eb;
+
+}
+
+
+.setting-row:last-child {
+
+    border-bottom: none;
+
+}
+
+
+.setting-label {
+
+    font-weight: 600;
+
+    margin-bottom: 6px;
+
+}
+
+
+.setting-description {
+
+    font-size: 13px;
+
+    color: #6b7280;
+
+    margin-bottom: 10px;
+
+}
+
+
+.form-control,
+.form-select {
+
+    max-width: 500px;
+
+}
+
+
+.save-button {
+
+    margin-top: 20px;
+
+}
+
+
+@media(max-width: 992px) {
+
+    .sidebar {
+
+        width: 70px;
+
+    }
+
+    .logo span,
+    .menu-item span,
+    .menu-title {
+
+        display: none;
+
+    }
+
+    .menu-item {
+
+        text-align: center;
+
+    }
+
+    .main {
+
+        margin-left: 70px;
+
+    }
+
+/* ================================
+   WhatsApp Billing Link
+================================ */
+
+.settings-card {
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.settings-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.settings-card-header h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    color: #0f172a;
+}
+
+.settings-card-header p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+.settings-card .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    background: #0d6efd;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.settings-card .btn-primary:hover {
+    background: #0b5ed7;
+}
+
+}

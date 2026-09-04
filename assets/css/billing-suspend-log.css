@@ -1,0 +1,33 @@
+/* NetMonitor Sprint 2.9
+   CSS khusus halaman Audit Suspend.
+*/
+.suspend-log-page{padding:30px}
+.suspend-log-header{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:18px;margin-bottom:20px
+}
+.suspend-log-header h1{margin:0;font-size:28px;color:#07142e}
+.suspend-log-header p{margin:6px 0 0;color:#60708c;font-size:13px}
+.suspend-log-card{
+    background:#fff;border:1px solid #dbe3ef;border-radius:14px;
+    padding:20px;box-shadow:0 2px 8px rgba(20,40,70,.04)
+}
+.suspend-log-table-wrap{overflow-x:auto;border:1px solid #e2e8f1;border-radius:8px}
+.suspend-log-table{
+    width:100%;min-width:980px;border-collapse:collapse;font-size:12px
+}
+.suspend-log-table th{
+    background:#f5f8fc;color:#53657f;text-align:left
+}
+.suspend-log-table th,.suspend-log-table td{
+    padding:10px;border-bottom:1px solid #e6ebf2;white-space:nowrap
+}
+.log-badge{
+    display:inline-block;padding:4px 8px;border-radius:999px;
+    font-size:10px;font-weight:800
+}
+.log-success{background:#d9f1e6;color:#08774e}
+.log-already{background:#e8eef7;color:#42536e}
+.log-error{background:#ffe1e5;color:#c6283d}
+.log-test{background:#fff0c7;color:#986b00}
+.log-live{background:#d9f1e6;color:#08774e}

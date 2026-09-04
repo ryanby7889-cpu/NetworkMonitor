@@ -1,0 +1,3 @@
+NetMonitor Billing PPPoE v10
+Fitur: suspend/aktifkan pelanggan terhubung ke status user PPPoE MikroTik.
+Catatan: pastikan api/pppoe.php yang aktif mendukung action disable_secret dan enable_secret.

@@ -1,0 +1,17 @@
+HOTSPOT SIDEBAR INTEGRATION
+
+Changes:
+- Added Hotspot to includes/sidebar.php.
+- Hotspot now uses the same shared sidebar as Dashboard/Router/PPPoE.
+- Existing Show / Hide Sidebar button and localStorage state are shared.
+- Hotspot active-menu state is preserved.
+
+No changes to:
+- Hotspot API behavior
+- Billing behavior
+- User/session/profile functionality
+
+Excluded:
+- Voucher
+- WhatsApp
+- Automatic suspend

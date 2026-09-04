@@ -1,0 +1,38 @@
+
+/* =========================================================
+   SPRINT 2.3 - INVOICE DETAIL / PAYMENT WORKFLOW
+   ========================================================= */
+.invoice-page{min-height:100vh;background:#f4f7fb;padding:30px;max-width:1180px;margin:auto}
+.invoice-topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px}
+.invoice-topbar h1{margin:0 0 5px;font-size:28px}
+.invoice-topbar small{color:#60708c}
+.invoice-summary{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+.invoice-summary>div{background:#fff;border:1px solid #dbe3ef;border-radius:12px;padding:15px}
+.invoice-label{display:block;color:#7a889e;font-size:9px;font-weight:800;letter-spacing:.8px;margin-bottom:7px}
+.invoice-summary strong{font-size:14px}
+.invoice-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}
+.invoice-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin-bottom:15px}
+.invoice-info>div{padding:10px 12px;background:#f7f9fc;border-radius:8px}
+.invoice-info small{display:block;color:#718198;font-size:10px;margin-bottom:5px}
+.invoice-info strong{font-size:13px;word-break:break-word}
+.invoice-info-wide{grid-template-columns:repeat(4,minmax(0,1fr))}
+.invoice-amount-card{display:flex;flex-direction:column}
+.invoice-amount{font-size:32px;font-weight:800;margin:20px 0 8px}
+.invoice-payment-info{font-size:12px;color:#60708c;margin-bottom:auto}
+.invoice-actions{margin-top:20px}
+@media(max-width:800px){
+ .invoice-page{padding:18px 12px}
+ .invoice-topbar{flex-direction:column;align-items:flex-start}
+ .invoice-summary{grid-template-columns:repeat(2,1fr)}
+ .invoice-grid{grid-template-columns:1fr}
+ .invoice-info-wide{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:480px){
+ .invoice-summary,.invoice-info,.invoice-info-wide{grid-template-columns:1fr}
+ .invoice-amount{font-size:26px}
+}
+@media print{
+ .invoice-page{padding:0;background:#fff}
+ .invoice-topbar .billing-actions,.invoice-actions,.invoice-page .billing-message{display:none!important}
+ .invoice-card{box-shadow:none}
+}

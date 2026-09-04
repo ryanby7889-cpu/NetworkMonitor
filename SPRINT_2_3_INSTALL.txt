@@ -1,0 +1,40 @@
+SPRINT 2.3 — INVOICE DETAIL & PAYMENT WORKFLOW
+
+File baru:
+- billing/invoice.php
+- assets/css/invoice-detail.css
+
+File diperbarui:
+- billing/index.php
+- billing/detail.php
+
+Fitur:
+- Detail invoice
+- Status Lunas / Belum Bayar / Terlambat / Dibatalkan
+- Data pelanggan terkait
+- Total invoice
+- Tanggal jatuh tempo
+- Tanggal pembayaran
+- Metode pembayaran
+- Tombol Tandai Lunas
+- Tombol Batalkan
+- Tombol Cetak
+- Navigasi ke detail pelanggan
+
+API:
+- api/billing.php?action=invoices
+- api/billing.php?action=customers
+- api/billing.php?action=pay_invoice
+- api/billing.php?action=cancel_invoice
+
+URL:
+billing/invoice.php?invoice=ID
+
+Pasang:
+1. Backup folder billing.
+2. Replace billing/index.php dan billing/detail.php.
+3. Tambahkan billing/invoice.php.
+4. Tambahkan assets/css/invoice-detail.css.
+5. Ctrl+F5.
+
+Catatan: action API harus sesuai dengan API Billing yang sudah digunakan proyek.

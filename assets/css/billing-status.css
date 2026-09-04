@@ -1,0 +1,66 @@
+/* Sprint 2.7 - Billing Status */
+.billing-status-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.billing-status-card {
+    background: #fff;
+    border: 1px solid #e5eaf1;
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.billing-status-card .label {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 7px;
+}
+
+.billing-status-card .value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.billing-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.billing-status-badge.unpaid {
+    background: #fff3cd;
+    color: #8a5a00;
+}
+
+.billing-status-badge.overdue {
+    background: #ffe2e5;
+    color: #b42336;
+}
+
+.billing-status-badge.paid {
+    background: #dff5ea;
+    color: #137a4b;
+}
+
+.billing-status-badge.cancelled {
+    background: #e9edf3;
+    color: #596579;
+}
+
+@media (max-width: 900px) {
+    .billing-status-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .billing-status-summary {
+        grid-template-columns: 1fr;
+    }
+}

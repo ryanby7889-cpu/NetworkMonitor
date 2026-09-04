@@ -1,0 +1,169 @@
+/* =====================================================
+   NETMONITOR PRO — ALARM PAGE
+   Page-specific styling only
+===================================================== */
+
+.alarm-page {
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+.alarm-page .container-fluid {
+    max-width: 100%;
+    margin: 0;
+}
+
+.alarm-page .page-title {
+    font-size: 28px;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.alarm-page .subtitle {
+    margin-top: 5px;
+    color: var(--muted);
+}
+
+.alarm-page .refresh-text {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.alarm-page .stat-card {
+    min-height: 105px;
+    padding: 17px 18px;
+}
+
+.alarm-page .stat-value.text-danger {
+    color: var(--danger) !important;
+}
+
+.alarm-page .stat-value.text-success {
+    color: var(--success) !important;
+}
+
+.alarm-page .card {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.alarm-page .card-header {
+    color: var(--text);
+}
+
+.alarm-page .alert {
+    margin-bottom: 0;
+    border-radius: 8px;
+}
+
+.alarm-page .table-responsive {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.alarm-page table.table {
+    width: 100%;
+    min-width: 850px;
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+.alarm-page table.table th {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    border-bottom-color: var(--border);
+}
+
+.alarm-page table.table td {
+    color: var(--text);
+    font-size: 13px;
+    white-space: nowrap;
+    border-bottom-color: var(--border);
+}
+
+.alarm-page .alarm-card {
+    border-left: 5px solid var(--danger);
+}
+
+.alarm-page .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 8px;
+    border-radius: 6px;
+}
+
+.alarm-page .badge-critical,
+.alarm-page .badge-active {
+    background: var(--danger) !important;
+    color: #fff;
+}
+
+.alarm-page .badge-warning {
+    background: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.alarm-page .badge-resolved {
+    background: var(--success) !important;
+    color: #fff;
+}
+
+.alarm-page .message {
+    font-weight: 600;
+}
+
+.alarm-page .value {
+    font-weight: 700;
+}
+
+@media (max-width: 992px) {
+    .alarm-page .container-fluid {
+        padding: 20px !important;
+    }
+    .alarm-page .page-title {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 576px) {
+    .alarm-page .container-fluid {
+        padding: 16px !important;
+    }
+    .alarm-page .d-flex.justify-content-between {
+        align-items: flex-start !important;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+}
+
+/* Final horizontal-overflow fix */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+.alarm-page {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+.alarm-page .container-fluid {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+.alarm-page .row {
+    max-width: 100%;
+}
+.alarm-page .table-responsive {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+}

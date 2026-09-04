@@ -1,0 +1,25 @@
+/* Billing PPPoE */
+.billing-page{min-width:0}
+.billing-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.billing-actions{display:flex;gap:8px;flex-wrap:wrap}
+.billing-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:18px 0}
+.billing-card{min-width:0}
+.billing-card-header{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+.billing-search{width:280px;max-width:100%}
+.billing-table-wrap{overflow-x:auto}
+.billing-table{min-width:900px}
+.billing-modal[hidden]{display:none}
+.billing-modal{position:fixed;inset:0;z-index:1000}
+.billing-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.55)}
+.billing-dialog{position:relative;z-index:2;width:min(720px,calc(100% - 28px));margin:6vh auto;background:#fff;border-radius:14px;padding:20px;box-shadow:0 20px 60px rgba(15,23,42,.25)}
+.billing-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.billing-form-grid label{display:flex;flex-direction:column;gap:6px}
+.billing-form-grid .full{grid-column:1/-1}
+.billing-modal-header{display:flex;justify-content:space-between;gap:12px;margin-bottom:18px}
+.billing-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.badge-paid,.badge-unpaid,.badge-cancelled,.badge-active,.badge-suspended{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-paid,.badge-active{background:#d1fae5;color:#047857}
+.badge-unpaid{background:#fef3c7;color:#92400e}
+.badge-cancelled,.badge-suspended{background:#fee2e2;color:#b91c1c}
+@media(max-width:1000px){.billing-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.billing-header{flex-wrap:wrap}.billing-actions{width:100%}}
+@media(max-width:600px){.billing-stats{grid-template-columns:1fr}.billing-form-grid{grid-template-columns:1fr}.billing-form-grid .full{grid-column:auto}.billing-search{width:100%}}

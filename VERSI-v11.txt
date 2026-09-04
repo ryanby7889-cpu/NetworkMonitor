@@ -1,0 +1,7 @@
+NetMonitor Billing PPPoE v11
+- Kontrol penagihan dengan masa toleransi 0-30 hari.
+- Cek pelanggan yang invoice-nya terlambat melewati grace period.
+- Proses Suspend: menonaktifkan username PPPoE di MikroTik lalu status billing menjadi suspended.
+- Pembayaran invoice dari pelanggan suspended mencoba mengaktifkan kembali username MikroTik dan status billing.
+- Invoice, pembayaran, riwayat, kwitansi, dan auto-generate bulanan tetap dipertahankan.
+Catatan: tombol Proses Suspend harus dijalankan secara sengaja oleh operator; tidak melakukan suspend diam-diam saat halaman dibuka.

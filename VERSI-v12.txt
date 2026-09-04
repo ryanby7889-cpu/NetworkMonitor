@@ -1,0 +1,4 @@
+NetMonitor Billing PPPoE v12
+- Memperbaiki JavaScript yang menyebabkan seluruh tabel berhenti pada "Memuat data...".
+- Memperbaiki confirm pada fitur Proses Suspend agar tidak memutus parsing JavaScript.
+- Fitur v11 lainnya tetap dipertahankan.

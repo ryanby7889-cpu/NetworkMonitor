@@ -1,0 +1,88 @@
+body {
+    font-family: DejaVu Sans, sans-serif;
+    font-size: 10px;
+    color: #222;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.header p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.info {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.info td {
+    padding: 5px;
+}
+
+.cards {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.card {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+
+.card-title {
+    font-size: 9px;
+    color: #666;
+}
+
+.card-value {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.blue {
+    color: #0d6efd;
+}
+
+.green {
+    color: #198754;
+}
+
+.red {
+    color: #dc3545;
+}
+
+table.history {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+table.history th {
+    background: #172033;
+    color: white;
+    padding: 6px;
+    text-align: center;
+}
+
+table.history td {
+    border: 1px solid #ddd;
+    padding: 5px;
+    text-align: center;
+}
+
+.footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 8px;
+    color: #777;
+}

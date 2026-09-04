@@ -1,0 +1,238 @@
+/* =========================================================
+   NetMonitor - Sprint 2.8
+   CSS terpisah: billing-suspend.css
+   ========================================================= */
+
+.billing-suspend-page {
+    padding: 30px;
+}
+
+.billing-suspend-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.billing-suspend-header h1 {
+    margin: 0;
+    font-size: 28px;
+    color: #07142e;
+}
+
+.billing-suspend-header p {
+    margin: 6px 0 0;
+    color: #60708c;
+    font-size: 13px;
+}
+
+.billing-suspend-card {
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(20,40,70,.04);
+}
+
+.billing-suspend-warning {
+    display: flex;
+    gap: 14px;
+    padding: 15px 17px;
+    border-radius: 12px;
+    background: #eef7ff;
+    border: 1px solid #cfe5ff;
+    color: #174b7c;
+    margin-bottom: 18px;
+}
+
+.billing-suspend-warning .icon {
+    font-size: 24px;
+}
+
+.billing-suspend-warning strong {
+    font-size: 14px;
+}
+
+.billing-suspend-warning p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.card-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 16px;
+}
+
+.card-title h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+}
+
+.card-title small {
+    color: #60708c;
+    font-size: 12px;
+}
+
+.billing-suspend-controls {
+    display: grid;
+    grid-template-columns: 210px auto auto;
+    align-items: end;
+    gap: 12px;
+}
+
+.billing-suspend-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.billing-suspend-controls input {
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid #b9c5d6;
+    border-radius: 7px;
+    font: inherit;
+}
+
+.billing-suspend-btn {
+    border: 0;
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.billing-suspend-btn.primary {
+    background: #087cff;
+    color: #fff;
+}
+
+.billing-suspend-btn.secondary {
+    background: #e8eef7;
+    color: #17233a;
+}
+
+.billing-suspend-btn.danger {
+    background: #e3344b;
+    color: #fff;
+}
+
+.billing-suspend-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.billing-suspend-message {
+    margin-top: 15px;
+    padding: 11px 13px;
+    border-radius: 8px;
+    background: #e8f7ef;
+    color: #13724d;
+    font-size: 12px;
+}
+
+.billing-suspend-message.error {
+    background: #fff0f1;
+    color: #c6283d;
+}
+
+.mode-badge {
+    display: inline-flex;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.mode-badge.test {
+    background: #fff0c7;
+    color: #986b00;
+}
+
+.mode-badge.live {
+    background: #d9f1e6;
+    color: #08774e;
+}
+
+.billing-suspend-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e2e8f1;
+    border-radius: 8px;
+}
+
+.billing-suspend-table {
+    width: 100%;
+    min-width: 850px;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.billing-suspend-table th {
+    background: #f5f8fc;
+    color: #53657f;
+    text-align: left;
+}
+
+.billing-suspend-table th,
+.billing-suspend-table td {
+    padding: 11px 10px;
+    border-bottom: 1px solid #e6ebf2;
+    white-space: nowrap;
+}
+
+.billing-suspend-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.overdue-pill {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #ffe1e5;
+    color: #c6283d;
+    font-weight: 700;
+}
+
+@media (max-width: 900px) {
+    .billing-suspend-controls {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .billing-suspend-controls label {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 600px) {
+    .billing-suspend-page {
+        padding: 20px 15px;
+    }
+
+    .billing-suspend-header {
+        flex-direction: column;
+    }
+
+    .billing-suspend-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .billing-suspend-controls label {
+        grid-column: auto;
+    }
+
+    .billing-suspend-btn {
+        width: 100%;
+    }
+}

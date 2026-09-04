@@ -1,0 +1,35 @@
+/* Page-specific styles */
+
+/* FILTER */
+
+/* STAT CARD */
+
+/* REPORT CARD */
+
+.report-card{
+
+    background:white;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.06);
+
+}
+
+
+/* CHART */
+
+.chart-box{
+
+    height:400px;
+
+}
+
+/* Report page final layout safety */
+.report-page { width:100%; max-width:100%; box-sizing:border-box; overflow-x:hidden; }
+.report-page .card, .report-page .report-card { max-width:100%; box-sizing:border-box; }
+.report-page .table-responsive { width:100%; max-width:100%; overflow-x:auto; }
+.report-page .report-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+@media (max-width:768px) {
+  .report-page .report-actions { width:100%; }
+}
