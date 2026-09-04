@@ -1,4 +1,4 @@
-/* PPPoE PRO — live overview, filtering and session insights */
+/* PPPoE PRO — compact professional overview, filtering and session insights */
 (function(){
 'use strict';
 function init(){
@@ -6,7 +6,54 @@ function init(){
  if(document.getElementById('pppoePro')) return;
  const main=document.querySelector('.pppoe-page'); if(!main) return;
  const style=document.createElement('style'); style.id='pppoeProStyle'; style.textContent=`
- #pppoePro{margin:0 0 20px}.ppp-pro-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}.ppp-pro-title{font-size:14px;font-weight:800;color:var(--text)}.ppp-pro-sub{font-size:11px;color:var(--muted);margin-top:3px}.ppp-pro-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.ppp-pro-btn{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:9px;padding:7px 11px;font-size:11px;font-weight:750;cursor:pointer}.ppp-pro-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}.ppp-pro-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.ppp-pro-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow-card)}.ppp-pro-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}.ppp-pro-value{font-size:23px;font-weight:850;line-height:1.2;color:var(--text);margin-top:5px}.ppp-pro-meta{font-size:10px;color:var(--muted);margin-top:5px}.ppp-pro-online{color:#059669}.ppp-pro-warning{color:#d97706}.ppp-pro-danger{color:#dc2626}.ppp-pro-panel{margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px}.ppp-pro-panel-title{font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px}.ppp-pro-bars{display:grid;gap:8px}.ppp-pro-bar-row{display:grid;grid-template-columns:130px 1fr 48px;gap:9px;align-items:center;font-size:10px;color:var(--muted)}.ppp-pro-bar{height:7px;border-radius:99px;background:#e2e8f0;overflow:hidden}.ppp-pro-bar i{display:block;height:100%;background:#2563eb;border-radius:99px}.ppp-pro-empty{font-size:11px;color:var(--muted)}body.dark .ppp-pro-bar{background:#253044}@media(max-width:900px){.ppp-pro-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.ppp-pro-grid{grid-template-columns:1fr}.ppp-pro-bar-row{grid-template-columns:95px 1fr 40px}}
+ /* Prevent the fixed sidebar + width:100% combination from creating page-level horizontal scroll. */
+ .pppoe-page{width:calc(100% - var(--sidebar-open));max-width:calc(100% - var(--sidebar-open));min-width:0;overflow-x:hidden;padding:24px 26px 32px}
+ .sidebar.collapsed~.pppoe-page{width:calc(100% - var(--sidebar-closed));max-width:calc(100% - var(--sidebar-closed))}
+ .pppoe-page-header{margin-bottom:16px;gap:14px}
+ .pppoe-page-header .page-title{font-size:24px;letter-spacing:-.3px}
+ .pppoe-page-header .page-subtitle{font-size:12px;margin-top:3px}
+ #connectionStatus{min-height:32px;padding:0 10px;font-size:11px}
+ #refreshBtn{min-height:34px;font-size:12px;padding:7px 11px}
+ /* The original 3 KPI cards duplicate the PRO overview; keep one clean KPI system. */
+ .pppoe-page>.pppoe-stats{display:none!important}
+ #pppoePro{margin:0 0 16px}
+ .ppp-pro-toolbar{margin-bottom:10px;gap:8px}
+ .ppp-pro-title{font-size:13px}
+ .ppp-pro-sub{font-size:10px}
+ .ppp-pro-actions{gap:6px}
+ .ppp-pro-btn{padding:6px 10px;border-radius:8px;font-size:10px}
+ .ppp-pro-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+ .ppp-pro-card{min-height:84px;padding:12px 14px;border-radius:12px}
+ .ppp-pro-label{font-size:9px}
+ .ppp-pro-value{font-size:21px;margin-top:4px}
+ .ppp-pro-meta{font-size:9px;margin-top:4px}
+ .ppp-pro-panel{margin-top:10px;padding:12px 14px;border-radius:12px}
+ .ppp-pro-panel-title{font-size:11px;margin-bottom:8px}
+ .ppp-pro-bars{gap:6px}
+ .ppp-pro-bar-row{grid-template-columns:110px 1fr 36px;gap:8px;font-size:9px}
+ .ppp-pro-bar{height:6px}
+ .pppoe-card{margin-bottom:12px;border-radius:12px}
+ .pppoe-card-header{padding:13px 15px;gap:10px}
+ .pppoe-card-heading h2{font-size:15px}
+ .pppoe-card-heading small{font-size:10px;margin-top:3px}
+ .pppoe-table th{padding:9px 11px;font-size:10px}
+ .pppoe-table td{padding:9px 11px;font-size:12px}
+ .pppoe-table .btn{min-height:29px}
+ .btn-small{padding:5px 8px;font-size:10px}
+ .pppoe-search{min-height:34px;font-size:12px}
+ @media(max-width:1100px){
+   .ppp-pro-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ }
+ @media(max-width:700px){
+   .pppoe-page{width:calc(100% - var(--sidebar-closed));max-width:calc(100% - var(--sidebar-closed));padding:18px 14px 24px}
+   .pppoe-page-header{flex-direction:column;margin-bottom:14px}
+   .pppoe-actions{width:100%;justify-content:flex-start}
+   .ppp-pro-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ }
+ @media(max-width:480px){
+   .ppp-pro-grid{grid-template-columns:1fr}
+   .ppp-pro-bar-row{grid-template-columns:90px 1fr 32px}
+ }
  `; document.head.appendChild(style);
  const wrap=document.createElement('section'); wrap.id='pppoePro';
  wrap.innerHTML=`<div class="ppp-pro-toolbar"><div><div class="ppp-pro-title"><i class="bi bi-broadcast-pin"></i> PPPoE Live Overview</div><div class="ppp-pro-sub" id="pppProUpdated">Menunggu data...</div></div><div class="ppp-pro-actions"><button class="ppp-pro-btn active" data-pro-filter="all">Semua</button><button class="ppp-pro-btn" data-pro-filter="enabled">Enabled</button><button class="ppp-pro-btn" data-pro-filter="disabled">Disabled</button></div></div><div class="ppp-pro-grid"><div class="ppp-pro-card"><div class="ppp-pro-label">Active Sessions</div><div class="ppp-pro-value ppp-pro-online" id="pppProActive">0</div><div class="ppp-pro-meta">koneksi aktif saat ini</div></div><div class="ppp-pro-card"><div class="ppp-pro-label">Enabled Accounts</div><div class="ppp-pro-value" id="pppProEnabled">0</div><div class="ppp-pro-meta">akun siap digunakan</div></div><div class="ppp-pro-card"><div class="ppp-pro-label">Disabled Accounts</div><div class="ppp-pro-value ppp-pro-warning" id="pppProDisabled">0</div><div class="ppp-pro-meta">akun dinonaktifkan</div></div><div class="ppp-pro-card"><div class="ppp-pro-label">Traffic Sessions</div><div class="ppp-pro-value" id="pppProTraffic">0 B</div><div class="ppp-pro-meta">RX + TX cumulative</div></div></div><div class="ppp-pro-panel"><div class="ppp-pro-panel-title">Profile Distribution</div><div id="pppProBars" class="ppp-pro-bars"><div class="ppp-pro-empty">Memuat...</div></div></div>`;
