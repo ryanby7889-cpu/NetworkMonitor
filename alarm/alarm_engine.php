@@ -36,23 +36,9 @@ class AlarmEngine
         }
     }
 
-    /**
-     * PPPoE bandwidth alarm uses separate Download/Upload limits and thresholds.
-     * Download = router TX -> pelanggan, Upload = pelanggan RX -> router.
-     */
-    public function checkPppoeBandwidth(
-        $routerId,
-        $interface,
-        $username,
-        $downloadMbps,
-        $uploadMbps,
-        $downloadLimitMbps,
-        $uploadLimitMbps = 0,
-        $downloadWarningPercent = null,
-        $downloadCriticalPercent = null,
-        $uploadWarningPercent = null,
-        $uploadCriticalPercent = null
-    ) {
+    /** PPPoE: Download = router TX -> pelanggan, Upload = pelanggan RX -> router. */
+    public function checkPppoeBandwidth($routerId, $interface, $username, $downloadMbps, $uploadMbps, $downloadLimitMbps, $uploadLimitMbps = 0, $downloadWarningPercent = null, $downloadCriticalPercent = null, $uploadWarningPercent = null, $uploadCriticalPercent = null)
+    {
         $interface = trim((string)$interface) !== '' ? trim((string)$interface) : 'pppoe-' . $username;
         $dl = (float)$downloadMbps;
         $ul = (float)$uploadMbps;
@@ -63,6 +49,10 @@ class AlarmEngine
         $uw = $uploadWarningPercent === null ? AlarmConfig::uploadWarning() : (float)$uploadWarningPercent;
         $uc = $uploadCriticalPercent === null ? AlarmConfig::uploadCritical() : (float)$uploadCriticalPercent;
 
+        /* Convert old single-type PPPoE alarms to resolved history records. */
+        $legacy = $this->pdo->prepare("UPDATE alarms SET status='resolved',resolved_at=NOW() WHERE router_id=:router_id AND interface_name=:interface AND alarm_type='pppoe_bandwidth' AND status='active'");
+        $legacy->execute([':router_id' => $routerId, ':interface' => $interface]);
+
         $this->checkPppoeDirection($routerId, $interface, $username, 'download', $dl, $dlim, $dw, $dc);
         $this->checkPppoeDirection($routerId, $interface, $username, 'upload', $ul, $ulim, $uw, $uc);
     }
@@ -70,7 +60,6 @@ class AlarmEngine
     private function checkPppoeDirection($routerId, $interface, $username, $direction, $value, $limit, $warning, $critical)
     {
         $type = 'pppoe_bandwidth_' . $direction;
-
         if ($limit <= 0 || $value <= 0) {
             $this->resolveAlarm($routerId, $interface, $type);
             return;
@@ -78,25 +67,9 @@ class AlarmEngine
 
         $usage = ($value / $limit) * 100;
         if ($usage >= $critical) {
-            $this->createAlarm(
-                $routerId,
-                $interface,
-                $type,
-                'critical',
-                'PPPoE ' . $username . ' ' . $direction . ' sangat tinggi',
-                $value,
-                $limit * ($critical / 100)
-            );
+            $this->createAlarm($routerId, $interface, $type, 'critical', 'PPPoE ' . $username . ' ' . $direction . ' sangat tinggi', $value, $limit * ($critical / 100));
         } elseif ($usage >= $warning) {
-            $this->createAlarm(
-                $routerId,
-                $interface,
-                $type,
-                'warning',
-                'PPPoE ' . $username . ' ' . $direction . ' tinggi',
-                $value,
-                $limit * ($warning / 100)
-            );
+            $this->createAlarm($routerId, $interface, $type, 'warning', 'PPPoE ' . $username . ' ' . $direction . ' tinggi', $value, $limit * ($warning / 100));
         } else {
             $this->resolveAlarm($routerId, $interface, $type);
         }
@@ -105,45 +78,23 @@ class AlarmEngine
     private function createAlarm($routerId, $interface, $type, $severity, $message, $value, $threshold)
     {
         $stmt = $this->pdo->prepare("SELECT id FROM alarms WHERE router_id=:router_id AND interface_name=:interface AND alarm_type=:type AND status='active' LIMIT 1");
-        $stmt->execute([
-            ':router_id' => $routerId,
-            ':interface' => $interface,
-            ':type' => $type
-        ]);
+        $stmt->execute([':router_id' => $routerId, ':interface' => $interface, ':type' => $type]);
         $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($existing) {
             $update = $this->pdo->prepare("UPDATE alarms SET severity=:severity,message=:message,value=:value,threshold=:threshold WHERE id=:id");
-            $update->execute([
-                ':severity' => $severity,
-                ':message' => $message,
-                ':value' => $value,
-                ':threshold' => $threshold,
-                ':id' => $existing['id']
-            ]);
+            $update->execute([':severity' => $severity, ':message' => $message, ':value' => $value, ':threshold' => $threshold, ':id' => $existing['id']]);
             return;
         }
 
         $stmt = $this->pdo->prepare("INSERT INTO alarms (router_id,interface_name,alarm_type,severity,message,value,threshold,status) VALUES (:router_id,:interface,:type,:severity,:message,:value,:threshold,'active')");
-        $stmt->execute([
-            ':router_id' => $routerId,
-            ':interface' => $interface,
-            ':type' => $type,
-            ':severity' => $severity,
-            ':message' => $message,
-            ':value' => $value,
-            ':threshold' => $threshold
-        ]);
+        $stmt->execute([':router_id' => $routerId, ':interface' => $interface, ':type' => $type, ':severity' => $severity, ':message' => $message, ':value' => $value, ':threshold' => $threshold]);
     }
 
     private function resolveAlarm($routerId, $interface, $type)
     {
         $stmt = $this->pdo->prepare("UPDATE alarms SET status='resolved',resolved_at=NOW() WHERE router_id=:router_id AND interface_name=:interface AND alarm_type=:type AND status='active'");
-        $stmt->execute([
-            ':router_id' => $routerId,
-            ':interface' => $interface,
-            ':type' => $type
-        ]);
+        $stmt->execute([':router_id' => $routerId, ':interface' => $interface, ':type' => $type]);
     }
 
     public function routerOffline($routerId)
