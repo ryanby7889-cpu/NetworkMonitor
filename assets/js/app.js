@@ -57,5 +57,26 @@
 
         const current = localStorage.getItem(THEME_KEY) || 'light';
         applyTheme(current);
+
+        // Traffic History: refresh automatically so newly collected records
+        // appear without requiring the user to click "Tampilkan Data".
+        // Keep the current URL (including selected date filters) on reload.
+        if (window.location.pathname.toLowerCase().includes('/traffic/')) {
+            const AUTO_REFRESH_MS = 10000;
+            let refreshTimer = null;
+
+            const scheduleRefresh = () => {
+                if (refreshTimer) clearTimeout(refreshTimer);
+                refreshTimer = setTimeout(() => {
+                    if (document.visibilityState === 'visible') {
+                        window.location.reload();
+                    } else {
+                        scheduleRefresh();
+                    }
+                }, AUTO_REFRESH_MS);
+            };
+
+            scheduleRefresh();
+        }
     });
 })();
