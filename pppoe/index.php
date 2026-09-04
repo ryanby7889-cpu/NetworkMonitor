@@ -7,17 +7,9 @@
 <title>PPPoE Management - NetMonitor</title>
 <link rel="stylesheet" href="../assets/css/variables.css?v=8">
 <link rel="stylesheet" href="../assets/css/common.css?v=8">
+<link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="../assets/css/pppoe.css?v=13">
-<script>
-(function () {
-    try {
-        if (localStorage.getItem('netmonitor_theme') === 'dark') {
-            document.documentElement.classList.add('theme-dark');
-        }
-    } catch (e) {}
-})();
-</script>
 </head>
 <body>
 <?php
@@ -315,5 +307,6 @@ refresh();
 setInterval(refresh,10000);
 })();
 </script>
+    <script src="../assets/js/app.js?v=1"></script>
 </body>
 </html>

@@ -9,18 +9,10 @@ $invoiceId = $_GET['invoice'] ?? '';
 <title>Detail Invoice - NetMonitor</title>
 <link rel="stylesheet" href="../assets/css/variables.css?v=10">
 <link rel="stylesheet" href="../assets/css/common.css?v=10">
+<link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="../assets/css/billing.css?v=21">
 <link rel="stylesheet" href="../assets/css/invoice-detail.css?v=23">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<script>
-(function () {
-    try {
-        if (localStorage.getItem('netmonitor_theme') === 'dark') {
-            document.documentElement.classList.add('theme-dark');
-        }
-    } catch (e) {}
-})();
-</script>
 </head>
 <body>
 <div class="invoice-page">
@@ -168,5 +160,6 @@ $invoiceId = $_GET['invoice'] ?? '';
   load();
 })();
 </script>
+    <script src="../assets/js/app.js?v=1"></script>
 </body>
 </html>

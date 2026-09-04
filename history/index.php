@@ -29,6 +29,7 @@ src="https://cdn.jsdelivr.net/npm/chart.js">
 
 <link rel="stylesheet" href="../assets/css/variables.css">
     <link rel="stylesheet" href="../assets/css/common.css">
+    <link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="../assets/css/history.css">
 
 </head>
@@ -1140,6 +1141,7 @@ loadHistory("1h");
 </script>
 
 
+    <script src="../assets/js/app.js?v=1"></script>
 </body>
 
 </html>

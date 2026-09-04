@@ -10,19 +10,11 @@ $activeMenu = 'billing';
 
 <link rel="stylesheet" href="../assets/css/variables.css?v=10">
 <link rel="stylesheet" href="../assets/css/common.css?v=10">
+<link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="../assets/css/billing.css?v=21">
 <link rel="stylesheet" href="../assets/css/billing-suspend.css?v=1">
 <link rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<script>
-(function () {
-    try {
-        if (localStorage.getItem('netmonitor_theme') === 'dark') {
-            document.documentElement.classList.add('theme-dark');
-        }
-    } catch (e) {}
-})();
-</script>
 </head>
 <body>
 
@@ -271,5 +263,6 @@ $activeMenu = 'billing';
 })();
 </script>
 
+    <script src="../assets/js/app.js?v=1"></script>
 </body>
 </html>

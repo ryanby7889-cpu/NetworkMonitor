@@ -7,6 +7,7 @@
 <title>Laporan Billing - NetMonitor</title>
 <link rel="stylesheet" href="../assets/css/variables.css?v=8">
 <link rel="stylesheet" href="../assets/css/common.css?v=8">
+<link rel="stylesheet" href="../assets/css/theme.css?v=1">
 
 <style>
 *{box-sizing:border-box}
@@ -67,22 +68,22 @@ tbody tr:last-child td{border-bottom:0}
  body{background:#fff}
 }
 </style>
-<script>
-(function () {
-    try {
-        if (localStorage.getItem('netmonitor_theme') === 'dark') {
-            document.documentElement.classList.add('theme-dark');
-        }
-    } catch (e) {}
-})();
-</script>
 </head>
 <body>
 
-<?php
-$activeMenu = 'report';
-require_once __DIR__ . '/../includes/sidebar.php';
-?>
+<aside class="report-sidebar">
+ <div class="brand"><span class="brand-icon">◉</span><span>NetMonitor</span></div>
+ <div class="menu-title">Monitoring</div>
+ <a class="menu-item" href="../dashboard/">◉ <span>Dashboard</span></a>
+ <a class="menu-item" href="../traffic/">⌁ <span>Traffic History</span></a>
+ <div class="menu-title">System</div>
+ <a class="menu-item" href="../router/">▣ <span>Router</span></a>
+ <a class="menu-item" href="../pppoe/">◉ <span>PPPoE</span></a>
+ <a class="menu-item" href="../billing/">▣ <span>Billing</span></a>
+ <a class="menu-item active" href="./">▤ <span>Laporan</span></a>
+ <a class="menu-item" href="../alarm/">△ <span>Alarm</span></a>
+ <a class="menu-item" href="../settings/">⚙ <span>Settings</span></a>
+</aside>
 
 <main class="report-main">
  <div class="header">
@@ -235,5 +236,6 @@ $('printBtn').onclick=()=>window.print();
 initDates();
 load();
 </script>
+    <script src="../assets/js/app.js?v=1"></script>
 </body>
 </html>

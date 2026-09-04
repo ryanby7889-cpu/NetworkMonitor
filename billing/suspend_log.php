@@ -7,24 +7,24 @@
 <title>Audit Suspend - NetMonitor</title>
 <link rel="stylesheet" href="../assets/css/variables.css?v=10">
 <link rel="stylesheet" href="../assets/css/common.css?v=10">
+<link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="../assets/css/billing.css?v=21">
 <link rel="stylesheet" href="../assets/css/billing-suspend-log.css?v=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<script>
-(function () {
-    try {
-        if (localStorage.getItem('netmonitor_theme') === 'dark') {
-            document.documentElement.classList.add('theme-dark');
-        }
-    } catch (e) {}
-})();
-</script>
 </head>
 <body>
-<?php
-$activeMenu = 'billing';
-require_once __DIR__ . '/../includes/sidebar.php';
-?>
+<aside class="billing-sidebar">
+  <div class="brand"><span class="brand-icon">◉</span><span>NetMonitor</span></div>
+  <div class="menu-title">Monitoring</div>
+  <a class="menu-item" href="../dashboard/">◉ <span>Dashboard</span></a>
+  <a class="menu-item" href="../traffic/">⌁ <span>Traffic History</span></a>
+  <div class="menu-title">System</div>
+  <a class="menu-item" href="../router/">▣ <span>Router</span></a>
+  <a class="menu-item" href="../pppoe/">◉ <span>PPPoE</span></a>
+  <a class="menu-item active" href="../billing/">▣ <span>Billing</span></a>
+  <a class="menu-item" href="../alarm/">△ <span>Alarm</span></a>
+  <a class="menu-item" href="../settings/">⚙ <span>Settings</span></a>
+</aside>
 
 <main class="billing-page-shell">
 <div class="billing-main suspend-log-page">
@@ -102,5 +102,6 @@ require_once __DIR__ . '/../includes/sidebar.php';
  load();
 })();
 </script>
+    <script src="../assets/js/app.js?v=1"></script>
 </body>
 </html>

@@ -1,0 +1,260 @@
+/* =====================================================
+   NETMONITOR PRO - GLOBAL LIGHT / DARK THEME
+   Loaded after page-specific CSS so every screen follows
+   the same theme without changing page functionality.
+===================================================== */
+
+:root {
+    --theme-bg: #f4f7fb;
+    --theme-card: #ffffff;
+    --theme-surface: #f8fafc;
+    --theme-text: #0f172a;
+    --theme-muted: #64748b;
+    --theme-border: #e2e8f0;
+    --theme-input: #ffffff;
+    --theme-table-head: #f5f8fc;
+    --theme-hover: #f8fafc;
+    --theme-shadow: 0 5px 20px rgba(15, 23, 42, .05);
+}
+
+html, body { transition: background-color .2s ease, color .2s ease; }
+
+body.dark {
+    --bg: #0b1120;
+    --card: #111827;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: #1e293b;
+    --surface: #111827;
+    --theme-bg: #0b1120;
+    --theme-card: #111827;
+    --theme-surface: #0f172a;
+    --theme-text: #f1f5f9;
+    --theme-muted: #94a3b8;
+    --theme-border: #263449;
+    --theme-input: #0f172a;
+    --theme-table-head: #172033;
+    --theme-hover: #172033;
+    --theme-shadow: 0 8px 24px rgba(0,0,0,.22);
+
+    background: var(--theme-bg) !important;
+    color: var(--theme-text) !important;
+}
+
+body.dark .main,
+body.dark .content,
+body.dark .main-content,
+body.dark .hotspot-page,
+body.dark .pppoe-page,
+body.dark .traffic-page,
+body.dark .alarm-page,
+body.dark .report-page,
+body.dark .report-main,
+body.dark .billing-main,
+body.dark .bd-main {
+    color: var(--theme-text);
+}
+
+/* Shared components / Bootstrap */
+body.dark .card,
+body.dark .monitor-card,
+body.dark .stat-card,
+body.dark .filter-card,
+body.dark .card-modern,
+body.dark .pppoe-stat,
+body.dark .pppoe-card,
+body.dark .traffic-chart-card,
+body.dark .filter-box,
+body.dark .settings-card,
+body.dark .report-card {
+    background: var(--theme-card) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow);
+}
+
+body.dark .page-title,
+body.dark .page-subtitle,
+body.dark .subtitle,
+body.dark .chart-title,
+body.dark .stat-value,
+body.dark .stat-time,
+body.dark .info-value,
+body.dark .info-title,
+body.dark .extra-title,
+body.dark .setting-label,
+body.dark .settings-card-header h2,
+body.dark .alarm-page .card-header,
+body.dark .alarm-page table.table td,
+body.dark .alarm-page table.table th,
+body.dark .report-page,
+body.dark .billing-title,
+body.dark .bd-title {
+    color: var(--theme-text) !important;
+}
+
+body.dark .page-subtitle,
+body.dark .subtitle,
+body.dark .chart-subtitle,
+body.dark .stat-title,
+body.dark .peak-label,
+body.dark .info-label,
+body.dark .stat-time,
+body.dark .setting-description,
+body.dark .billing-subtitle,
+body.dark .billing-help,
+body.dark .billing-card small,
+body.dark .bd-subtitle,
+body.dark .bd-stat-label,
+body.dark .hotspot-header p,
+body.dark .hs-stat span,
+body.dark .hs-card-head small,
+body.dark .hs-detail-grid span,
+body.dark .hs-detail-billing span,
+body.dark .hs-detail-billing small,
+body.dark .hs-last-refresh {
+    color: var(--theme-muted) !important;
+}
+
+body.dark .table,
+body.dark .table-modern,
+body.dark .billing-table,
+body.dark .hs-table-wrap table {
+    color: var(--theme-text) !important;
+}
+
+body.dark .table > :not(caption) > * > *,
+body.dark .table-modern th,
+body.dark .table-modern td,
+body.dark .billing-table th,
+body.dark .billing-table td,
+body.dark .hs-table-wrap th,
+body.dark .hs-table-wrap td,
+body.dark .setting-row {
+    border-color: var(--theme-border) !important;
+}
+
+body.dark .billing-table th,
+body.dark .hs-table-wrap th {
+    background: var(--theme-table-head) !important;
+    color: var(--theme-muted) !important;
+}
+
+body.dark .billing-table tbody tr:hover,
+body.dark .hs-table-wrap tbody tr:hover {
+    background: var(--theme-hover) !important;
+}
+
+body.dark input:not([type="checkbox"]):not([type="radio"]),
+body.dark textarea,
+body.dark select,
+body.dark .form-control,
+body.dark .form-select,
+body.dark .billing-search,
+body.dark .billing-input,
+body.dark .bd-month,
+body.dark .hs-tools input,
+body.dark .hs-card-head > input,
+body.dark .hs-form-grid input,
+body.dark .hs-form-grid select {
+    background: var(--theme-input) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder { color: #718096 !important; }
+
+body.dark .btn-outline-secondary,
+body.dark .billing-btn-secondary,
+body.dark .bd-btn-secondary,
+body.dark .hs-btn:not(.hs-primary):not(.danger):not(.warn):not(.success),
+body.dark .modal-close {
+    background: #172033 !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+body.dark .billing-stat,
+body.dark .billing-card,
+body.dark .billing-dialog,
+body.dark .bd-stat,
+body.dark .bd-card,
+body.dark .bd-panel,
+body.dark .bd-monthly-card,
+body.dark .hs-stat,
+body.dark .hs-card,
+body.dark .hs-modal-box {
+    background: var(--theme-card) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+body.dark .billing-table-wrap { border-color: var(--theme-border) !important; }
+body.dark .billing-mini-result,
+body.dark .billing-generation-result,
+body.dark .hs-detail-grid > div,
+body.dark .hs-traffic-summary > div {
+    background: var(--theme-surface) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+body.dark .hs-detail-billing,
+body.dark .hs-message,
+body.dark .bd-notice {
+    background: #172033 !important;
+    color: #cbd5e1 !important;
+    border-color: var(--theme-border) !important;
+}
+
+/* Legacy custom sidebars */
+body.dark .billing-sidebar,
+body.dark .bd-sidebar,
+body.dark .report-sidebar {
+    background: linear-gradient(180deg, #020617 0%, #0f172a 100%) !important;
+}
+body.dark .billing-sidebar .menu-item:hover,
+body.dark .bd-menu-item:hover,
+body.dark .report-sidebar .menu-item:hover { background: #17243a !important; }
+
+/* Router / status surfaces */
+body.dark .status-icon { background: #12332f !important; }
+body.dark .router-info,
+body.dark .extra-card { color: var(--theme-text); }
+
+/* Global theme toggle */
+.global-theme-toggle {
+    position: fixed;
+    top: 16px;
+    right: 18px;
+    z-index: 9000;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--theme-border);
+    border-radius: 10px;
+    background: var(--theme-card);
+    color: var(--theme-text);
+    box-shadow: 0 4px 16px rgba(15,23,42,.10);
+    cursor: pointer;
+    transition: transform .2s ease, background .2s ease, color .2s ease;
+}
+.global-theme-toggle:hover { transform: translateY(-1px); }
+.global-theme-toggle:focus-visible { outline: 2px solid var(--primary, #0d6efd); outline-offset: 2px; }
+
+#darkMode {
+    background: var(--theme-card) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+@media (max-width: 576px) {
+    .global-theme-toggle { top: 10px; right: 10px; }
+}
+
+@media print {
+    .global-theme-toggle { display: none !important; }
+}

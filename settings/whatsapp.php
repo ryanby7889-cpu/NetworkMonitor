@@ -48,15 +48,6 @@ $activeMenu = 'settings';
     href="../assets/css/settings.css"
 >
 
-<script>
-(function () {
-    try {
-        if (localStorage.getItem('netmonitor_theme') === 'dark') {
-            document.documentElement.classList.add('theme-dark');
-        }
-    } catch (e) {}
-})();
-</script>
 </head>
 
 
@@ -1132,6 +1123,7 @@ load();
 </script>
 
 
+    <script src="../assets/js/app.js?v=1"></script>
 </body>
 
 </html>

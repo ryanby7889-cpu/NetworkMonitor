@@ -9,25 +9,27 @@ $activeMenu = 'billing';
 <title>Billing PPPoE - NetMonitor</title>
 <link rel="stylesheet" href="../assets/css/variables.css?v=11">
 <link rel="stylesheet" href="../assets/css/common.css?v=11">
+<link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="../assets/css/billing.css?v=22">
 <link rel="stylesheet" href="../assets/css/billing-smart-filter.css?v=22">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<script>
-(function () {
-    try {
-        if (localStorage.getItem('netmonitor_theme') === 'dark') {
-            document.documentElement.classList.add('theme-dark');
-        }
-    } catch (e) {}
-})();
-</script>
 </head>
 <body>
 
-<?php
-$activeMenu = 'billing';
-require_once __DIR__ . '/../includes/sidebar.php';
-?>
+<aside class="billing-sidebar">
+  <div class="brand"><span class="brand-icon"><i class="bi bi-router"></i></span><span>NetMonitor</span></div>
+  <div class="menu-title">Monitoring</div>
+  <a class="menu-item" href="../dashboard/"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+  <a class="menu-item" href="../traffic/"><i class="bi bi-graph-up"></i><span>Traffic History</span></a>
+  <div class="menu-title">System</div>
+  <a class="menu-item" href="../router/"><i class="bi bi-router"></i><span>Router</span></a>
+  <a class="menu-item" href="../pppoe/"><i class="bi bi-globe2"></i><span>PPPoE</span></a>
+  <a class="menu-item active" href="./"><i class="bi bi-receipt"></i><span>Billing</span></a>
+  <a class="menu-item" href="../billing-dashboard/"><i class="bi bi-bar-chart-line"></i><span>Dashboard Billing</span></a>
+  <a class="menu-item" href="../report/"><i class="bi bi-file-earmark-text"></i><span>Laporan</span></a>
+  <a class="menu-item" href="../alarm/"><i class="bi bi-exclamation-triangle"></i><span>Alarm</span></a>
+  <a class="menu-item" href="../settings/"><i class="bi bi-gear"></i><span>Settings</span></a>
+</aside>
 
 <div class="billing-page-shell">
 <main class="billing-main">
@@ -702,5 +704,6 @@ require_once __DIR__ . '/../includes/sidebar.php';
   setInterval(refresh,30000);
 })();
 </script>
+    <script src="../assets/js/app.js?v=1"></script>
 </body>
 </html>
