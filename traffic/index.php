@@ -1,44 +1,16 @@
 <?php
-
 require_once "../Config/database.php";
 
 $db = new Database();
 $pdo = $db->connect();
 
-$start = $_GET['start'] ?? date('Y-m-d');
-$end   = $_GET['end'] ?? date('Y-m-d');
+$range = $_GET['range'] ?? '24h';
+$allowedRanges = ['1h', '6h', '24h', '7d'];
+if (!in_array($range, $allowedRanges, true)) $range = '24h';
 
-$sql = "
-    SELECT interface_name, download_mbps, upload_mbps, rx_packet, tx_packet,
-           cpu, memory, disk, created_at
-    FROM traffic_history
-    WHERE DATE(created_at) BETWEEN :start AND :end
-    ORDER BY created_at ASC
-";
-
-$stmt = $pdo->prepare($sql);
-$stmt->execute([':start' => $start, ':end' => $end]);
-$data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$labels = [];
-$downloads = [];
-$uploads = [];
-foreach ($data as $row) {
-    $labels[] = date('H:i:s', strtotime($row['created_at']));
-    $downloads[] = (float)$row['download_mbps'];
-    $uploads[] = (float)$row['upload_mbps'];
-}
-
-$maxDownload = 0;
-$maxUpload = 0;
-$avgDownload = 0;
-if ($data) {
-    $downloadValues = array_map('floatval', array_column($data, 'download_mbps'));
-    $uploadValues = array_map('floatval', array_column($data, 'upload_mbps'));
-    $maxDownload = max($downloadValues);
-    $maxUpload = max($uploadValues);
-    $avgDownload = array_sum($downloadValues) / count($downloadValues);
-}
+$to = date('Y-m-d H:i:s');
+$seconds = ['1h' => 3600, '6h' => 21600, '24h' => 86400, '7d' => 604800][$range];
+$from = date('Y-m-d H:i:s', time() - $seconds);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -53,6 +25,22 @@ if ($data) {
 <link rel="stylesheet" href="../assets/css/common.css?v=4">
 <link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="../assets/css/traffic.css?v=6">
+<style>
+.history-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.history-range{border:1px solid #dbe2ea;background:#fff;color:#475569;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.history-range:hover{border-color:#2563eb;color:#2563eb}
+.history-range.active{background:#2563eb;color:#fff;border-color:#2563eb}
+.history-meta{font-size:12px;color:#64748b}
+.pagination-wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
+.pagination-buttons{display:flex;gap:6px;align-items:center}
+.page-btn{min-width:36px;height:34px;border:1px solid #dbe2ea;background:#fff;border-radius:8px;color:#475569;font-weight:600;cursor:pointer}
+.page-btn:hover:not(:disabled){border-color:#2563eb;color:#2563eb}
+.page-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+.page-btn:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:768px){.history-toolbar{width:100%}.history-range{flex:1}.pagination-wrap{align-items:flex-start;flex-direction:column}}
+body.dark .history-range,body.dark .page-btn{background:#111827;color:#cbd5e1;border-color:#334155}
+body.dark .history-range.active,body.dark .page-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+</style>
 </head>
 <body>
 <?php
@@ -61,41 +49,52 @@ require_once "../includes/sidebar.php";
 ?>
 
 <div class="content">
-    <div class="page-title">Traffic History</div>
-    <div class="subtitle">Historical MikroTik Ether1 traffic monitoring</div>
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-1">
+        <div>
+            <div class="page-title">Traffic History</div>
+            <div class="subtitle">Historical MikroTik Ether1 traffic monitoring</div>
+        </div>
+        <div class="history-toolbar" id="rangeToolbar">
+            <button type="button" class="history-range" data-range="1h">1 Jam</button>
+            <button type="button" class="history-range" data-range="6h">6 Jam</button>
+            <button type="button" class="history-range" data-range="24h">24 Jam</button>
+            <button type="button" class="history-range" data-range="7d">7 Hari</button>
+        </div>
+    </div>
 
-    <div class="filter-box">
-        <form method="GET">
+    <div class="filter-box mt-3">
+        <form method="GET" id="historyFilterForm">
             <div class="row align-items-end">
                 <div class="col-md-4">
                     <label class="form-label">Start Date</label>
-                    <input type="date" name="start" class="form-control" value="<?= htmlspecialchars($start, ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="date" name="start" id="historyStart" class="form-control">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">End Date</label>
-                    <input type="date" name="end" class="form-control" value="<?= htmlspecialchars($end, ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="date" name="end" id="historyEnd" class="form-control">
                 </div>
                 <div class="col-md-4">
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary flex-fill">🔍 Tampilkan Data</button>
-                        <a href="export.php?start=<?= urlencode($start) ?>&end=<?= urlencode($end) ?>" class="btn btn-success flex-fill">📥 Export CSV</a>
+                        <a href="export.php" id="exportTraffic" class="btn btn-success flex-fill">📥 Export CSV</a>
                     </div>
                 </div>
             </div>
         </form>
+        <div class="history-meta mt-2" id="rangeInfo">Memuat periode...</div>
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-3"><div class="stat-card"><div class="stat-title">Total Records</div><div class="stat-value"><?= number_format(count($data)) ?></div></div></div>
-        <div class="col-md-3"><div class="stat-card"><div class="stat-title">Max Download</div><div class="stat-value text-primary"><?= number_format($maxDownload, 2) ?> Mbps</div></div></div>
-        <div class="col-md-3"><div class="stat-card"><div class="stat-title">Max Upload</div><div class="stat-value text-success"><?= number_format($maxUpload, 2) ?> Mbps</div></div></div>
-        <div class="col-md-3"><div class="stat-card"><div class="stat-title">Average Download</div><div class="stat-value"><?= number_format($avgDownload, 2) ?> Mbps</div></div></div>
+        <div class="col-md-3"><div class="stat-card"><div class="stat-title">Total Records</div><div class="stat-value" id="statRecords">0</div></div></div>
+        <div class="col-md-3"><div class="stat-card"><div class="stat-title">Max Download</div><div class="stat-value text-primary" id="statMaxDownload">0.00 Mbps</div></div></div>
+        <div class="col-md-3"><div class="stat-card"><div class="stat-title">Max Upload</div><div class="stat-value text-success" id="statMaxUpload">0.00 Mbps</div></div></div>
+        <div class="col-md-3"><div class="stat-card"><div class="stat-title">Average Download</div><div class="stat-value" id="statAvgDownload">0.00 Mbps</div></div></div>
     </div>
 
     <div class="card-modern mb-4">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between mb-3">
-                <div><h5 class="mb-1">Traffic Trend</h5><small class="text-muted"><?= htmlspecialchars($start) ?> sampai <?= htmlspecialchars($end) ?></small></div>
+                <div><h5 class="mb-1">Traffic Trend</h5><small class="text-muted" id="chartPeriod">Memuat...</small></div>
                 <span class="badge bg-primary">ETHER1</span>
             </div>
             <div class="chart-container"><canvas id="trafficChart"></canvas></div>
@@ -104,53 +103,37 @@ require_once "../includes/sidebar.php";
 
     <div class="card-modern">
         <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="mb-1">Traffic Log</h5><small class="text-muted">Data monitoring</small></div></div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div><h5 class="mb-1">Traffic Log</h5><small class="text-muted">Menampilkan data terbaru sesuai periode</small></div>
+                <select id="perPageSelect" class="form-select form-select-sm" style="width:auto">
+                    <option value="25">25 / halaman</option>
+                    <option value="50">50 / halaman</option>
+                    <option value="100">100 / halaman</option>
+                </select>
+            </div>
             <div class="table-responsive">
                 <table class="table table-modern">
                     <thead><tr><th>Time</th><th>Interface</th><th>Download</th><th>Upload</th><th>RX Packet</th><th>TX Packet</th><th>CPU</th><th>Memory</th><th>Disk</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($data as $row): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($row['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><span class="badge-interface"><?= htmlspecialchars($row['interface_name'], ENT_QUOTES, 'UTF-8') ?></span></td>
-                        <td class="download"><?= number_format((float)$row['download_mbps'], 2) ?> Mbps</td>
-                        <td class="upload"><?= number_format((float)$row['upload_mbps'], 2) ?> Mbps</td>
-                        <td><?= number_format((int)$row['rx_packet']) ?> pkt/s</td>
-                        <td><?= number_format((int)$row['tx_packet']) ?> pkt/s</td>
-                        <td><?= number_format((float)$row['cpu'], 1) ?> %</td>
-                        <td><?= number_format((float)$row['memory'], 1) ?> %</td>
-                        <td><?= number_format((float)$row['disk'], 1) ?> %</td>
-                    </tr>
-                    <?php endforeach; ?>
-                    <?php if (!$data): ?><tr><td colspan="9" class="text-center py-5 text-muted">Tidak ada data pada periode tersebut.</td></tr><?php endif; ?>
-                    </tbody>
+                    <tbody id="trafficTableBody"><tr><td colspan="9" class="text-center py-5 text-muted">Memuat data...</td></tr></tbody>
                 </table>
+            </div>
+            <div class="pagination-wrap">
+                <div class="history-meta" id="paginationInfo">0 data</div>
+                <div class="pagination-buttons" id="paginationButtons"></div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-const labels = <?= json_encode($labels) ?>;
-const downloadData = <?= json_encode($downloads) ?>;
-const uploadData = <?= json_encode($uploads) ?>;
-const canvas = document.getElementById('trafficChart');
-if (canvas) {
-    new Chart(canvas, {
-        type: 'line',
-        data: { labels, datasets: [
-            { label: 'Download', data: downloadData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.12)', fill: true, tension: .35, pointRadius: 0, pointHoverRadius: 5, borderWidth: 3 },
-            { label: 'Upload', data: uploadData, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.10)', fill: true, tension: .35, pointRadius: 0, pointHoverRadius: 5, borderWidth: 3 }
-        ]},
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: c => c.dataset.label + ' : ' + Number(c.parsed.y).toFixed(2) + ' Mbps' } } },
-            scales: { x: { grid: { display: false } }, y: { beginAtZero: true, title: { display: true, text: 'Traffic (Mbps)' } } }
-        }
-    });
-}
+window.TRAFFIC_HISTORY_CONFIG = {
+    range: <?= json_encode($range) ?>,
+    from: <?= json_encode($from) ?>,
+    to: <?= json_encode($to) ?>,
+    page: 1,
+    perPage: 25
+};
 </script>
-<script src="../assets/js/app.js?v=2"></script>
+<script src="../assets/js/app.js?v=3"></script>
 </body>
 </html>
