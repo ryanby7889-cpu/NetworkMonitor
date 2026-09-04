@@ -55,6 +55,7 @@
 
         applyTheme(localStorage.getItem(THEME_KEY) || 'light');
         initTrafficHistory();
+        initDashboardHistory();
     });
 
     function initTrafficHistory() {
@@ -295,5 +296,77 @@
 
         updateRangeButtons();
         schedule();
+    }
+
+    // Dashboard chart/statistics are sourced from traffic_history so they do
+    // not reset when the page is reloaded and stay consistent with History.
+    function initDashboardHistory() {
+        if (!window.location.pathname.toLowerCase().includes('/dashboard/')) return;
+        if (typeof Chart === 'undefined' || !document.getElementById('trafficChart')) return;
+
+        let timer = null;
+        let busy = false;
+
+        async function refreshDashboardHistory() {
+            if (busy || document.visibilityState !== 'visible') return;
+            busy = true;
+
+            try {
+                const response = await fetch('../api/dashboard_history.php?nocache=' + Date.now(), {
+                    cache: 'no-store',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || 'Dashboard history error');
+
+                if (typeof labels !== 'undefined' && typeof downloadData !== 'undefined' && typeof uploadData !== 'undefined') {
+                    labels.splice(0, labels.length, ...(result.labels || []));
+                    downloadData.splice(0, downloadData.length, ...(result.downloads || []));
+                    uploadData.splice(0, uploadData.length, ...(result.uploads || []));
+                }
+
+                if (typeof trafficChart !== 'undefined' && trafficChart) {
+                    trafficChart.data.labels = result.labels || [];
+                    trafficChart.data.datasets[0].data = result.downloads || [];
+                    trafficChart.data.datasets[1].data = result.uploads || [];
+                    trafficChart.update('none');
+                }
+
+                const peakDownloadElement = document.getElementById('peakDownload');
+                const peakUploadElement = document.getElementById('peakUpload');
+                if (peakDownloadElement) peakDownloadElement.textContent = Number(result.peak_download || 0).toFixed(2) + ' Mbps';
+                if (peakUploadElement) peakUploadElement.textContent = Number(result.peak_upload || 0).toFixed(2) + ' Mbps';
+            } catch (error) {
+                console.warn('Dashboard history sync gagal:', error.message);
+            } finally {
+                busy = false;
+            }
+        }
+
+        function schedule() {
+            clearTimeout(timer);
+            timer = setTimeout(async () => {
+                await refreshDashboardHistory();
+                schedule();
+            }, 10000);
+        }
+
+        // Give the live dashboard request a moment to populate first, then
+        // replace the chart with the persisted collector samples.
+        setTimeout(() => {
+            refreshDashboardHistory();
+            schedule();
+        }, 500);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                refreshDashboardHistory();
+                schedule();
+            } else {
+                clearTimeout(timer);
+            }
+        });
     }
 })();
