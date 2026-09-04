@@ -12,6 +12,7 @@ $activeMenu = 'hotspot';
 <link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="../assets/css/hotspot.css">
 <link rel="stylesheet" href="../assets/css/hotspot_router.css?v=1">
+<link rel="stylesheet" href="../assets/css/hotspot_status.css?v=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
@@ -41,10 +42,7 @@ $activeMenu = 'hotspot';
   </section>
 
   <section class="hs-card">
-    <div class="hs-card-head">
-      <div><h2>Live Traffic Hotspot</h2><small>Akumulasi traffic dari active session</small></div>
-      <div class="hs-tools"><input id="trafficSearch" placeholder="Cari user / IP..."><select id="trafficSort"><option value="rx">RX terbesar</option><option value="tx">TX terbesar</option><option value="total">Total terbesar</option><option value="name">Username A-Z</option></select></div>
-    </div>
+    <div class="hs-card-head"><div><h2>Live Traffic Hotspot</h2><small>Akumulasi traffic dari active session</small></div><div class="hs-tools"><input id="trafficSearch" placeholder="Cari user / IP..."><select id="trafficSort"><option value="rx">RX terbesar</option><option value="tx">TX terbesar</option><option value="total">Total terbesar</option><option value="name">Username A-Z</option></select></div></div>
     <div class="hs-traffic-summary"><div><span>Total RX</span><strong id="trafficIn">0 B</strong></div><div><span>Total TX</span><strong id="trafficOut">0 B</strong></div><div><span>Session Terbesar</span><strong id="trafficPeak">-</strong></div></div>
     <div class="hs-table-wrap"><table><thead><tr><th>#</th><th>User</th><th>IP</th><th>Uptime</th><th>RX</th><th>TX</th></tr></thead><tbody id="trafficTable"><tr><td colspan="6">Memuat...</td></tr></tbody></table></div>
   </section>
