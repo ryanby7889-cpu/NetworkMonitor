@@ -83,5 +83,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
-<!-- Dashboard PRO v4 is self-scoped and activates only on dashboard pages. -->
+<!-- Global alarm notification + Dashboard PRO v4. -->
+<script src="../assets/js/alarm_notification.js?v=1"></script>
 <script src="../assets/js/dashboard_pro4.js?v=4"></script>
