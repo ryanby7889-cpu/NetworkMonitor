@@ -1,7 +1,8 @@
-/* NetMonitor PPPoE Stats Bus PRO v1 — one router/API poll shared by all PPPoE widgets */
+/* NetMonitor PPPoE Stats Bus PRO v2 — one router/API poll shared by all PPPoE widgets */
 (function(){'use strict';
 if(!location.pathname.toLowerCase().includes('/pppoe/'))return;
 const api='../api/pppoe_stats.php';
+const reconcileApi='../api/pppoe_reconcile.php';
 let timer=null,loading=false,lastAt=0;
 window.pppoeStatsSnapshot=window.pppoeStatsSnapshot||null;
 async function poll(){
@@ -14,6 +15,7 @@ async function poll(){
     window.pppoeStatsSnapshot={data:d,now:now,dt:dt};
     lastAt=now;
     window.dispatchEvent(new CustomEvent('pppoe:stats',{detail:{data:d,dt:dt,now:now}}));
+    try{await fetch(reconcileApi+'?t='+Date.now(),{cache:'no-store'});}catch(_e){}
   }catch(e){window.dispatchEvent(new CustomEvent('pppoe:stats-error',{detail:{message:e.message||'PPPoE stats gagal'}}))}
   finally{loading=false}
 }
