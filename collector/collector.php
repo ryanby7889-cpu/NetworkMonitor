@@ -16,8 +16,8 @@ if (PHP_SAPI !== 'cli') {
     }
 }
 
-require_once __DIR__ . "/../config/mikrotik.php";
-require_once __DIR__ . "/../config/database.php";
+require_once __DIR__ . "/../Config/mikrotik.php";
+require_once __DIR__ . "/../Config/database.php";
 require_once __DIR__ . "/../library/routeros_api.class.php";
 
 date_default_timezone_set('Asia/Jakarta');
