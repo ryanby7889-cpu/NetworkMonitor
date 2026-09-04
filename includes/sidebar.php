@@ -3,174 +3,85 @@ $activeMenu = $activeMenu ?? '';
 ?>
 
 <div class="sidebar" id="netSidebar">
-
-    <!-- LOGO -->
     <div class="logo">
-
         <i class="bi bi-router"></i>
-
         <span>NetMonitor</span>
-
     </div>
 
-
-    <!-- TOGGLE SHOW / HIDE -->
-    <button
-        type="button"
-        class="sidebar-toggle"
-        id="sidebarToggle"
-        title="Show / Hide Sidebar"
-        aria-label="Show / Hide Sidebar"
-        aria-expanded="true"
-    >
+    <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Show / Hide Sidebar" aria-label="Show / Hide Sidebar" aria-expanded="true">
         <i class="bi bi-chevron-left"></i>
     </button>
 
+    <div class="menu-title"><span>Monitoring</span></div>
 
-    <!-- =========================
-         MONITORING
-    ========================== -->
-
-    <div class="menu-title">
-        <span>Monitoring</span>
-    </div>
-
-
-    <a
-        href="../dashboard/index.php"
-        class="menu-item <?= $activeMenu === 'dashboard' ? 'active' : '' ?>"
-        title="Dashboard"
-    >
+    <a href="../dashboard/index.php" class="menu-item <?= $activeMenu === 'dashboard' ? 'active' : '' ?>" title="Dashboard">
         <i class="bi bi-speedometer2"></i>
         <span>Dashboard</span>
     </a>
 
-
-    <a
-        href="../traffic/index.php"
-        class="menu-item <?= $activeMenu === 'traffic' ? 'active' : '' ?>"
-        title="Traffic History"
-    >
+    <a href="../traffic/index.php" class="menu-item <?= $activeMenu === 'traffic' ? 'active' : '' ?>" title="Traffic History">
         <i class="bi bi-graph-up"></i>
         <span>Traffic History</span>
     </a>
 
+    <div class="menu-title"><span>System</span></div>
 
-    <!-- =========================
-         SYSTEM
-    ========================== -->
-
-    <div class="menu-title">
-        <span>System</span>
-    </div>
-
-
-    <a
-        href="../router/index.php"
-        class="menu-item <?= $activeMenu === 'router' ? 'active' : '' ?>"
-        title="Router"
-    >
+    <a href="../router/index.php" class="menu-item <?= $activeMenu === 'router' ? 'active' : '' ?>" title="Router">
         <i class="bi bi-router"></i>
         <span>Router</span>
     </a>
 
-
-    <a
-        href="../pppoe/index.php"
-        class="menu-item <?= $activeMenu === 'pppoe' ? 'active' : '' ?>"
-        title="PPPoE"
-    >
+    <a href="../pppoe/index.php" class="menu-item <?= $activeMenu === 'pppoe' ? 'active' : '' ?>" title="PPPoE">
         <i class="bi bi-globe2"></i>
         <span>PPPoE</span>
     </a>
 
-
-    <a
-        href="../hotspot/"
-        class="menu-item <?= $activeMenu === 'hotspot' ? 'active' : '' ?>"
-        title="Hotspot"
-    >
+    <a href="../hotspot/" class="menu-item <?= $activeMenu === 'hotspot' ? 'active' : '' ?>" title="Hotspot">
         <i class="bi bi-wifi"></i>
         <span>Hotspot</span>
     </a>
 
-
-    <a
-        href="../billing/index.php"
-        class="menu-item <?= $activeMenu === 'billing' ? 'active' : '' ?>"
-        title="Billing"
-    >
+    <a href="../billing/index.php" class="menu-item <?= $activeMenu === 'billing' ? 'active' : '' ?>" title="Billing">
         <i class="bi bi-receipt"></i>
         <span>Billing</span>
     </a>
 
-
-    <a
-        href="../alarm/index.php"
-        class="menu-item <?= $activeMenu === 'alarm' ? 'active' : '' ?>"
-        title="Alarm"
-    >
+    <a href="../alarm/index.php" class="menu-item <?= $activeMenu === 'alarm' ? 'active' : '' ?>" title="Alarm">
         <i class="bi bi-exclamation-triangle"></i>
         <span>Alarm</span>
     </a>
 
-
-    <a
-        href="../settings/index.php"
-        class="menu-item <?= $activeMenu === 'settings' ? 'active' : '' ?>"
-        title="Settings"
-    >
+    <a href="../settings/index.php" class="menu-item <?= $activeMenu === 'settings' ? 'active' : '' ?>" title="Settings">
         <i class="bi bi-gear"></i>
         <span>Settings</span>
     </a>
-
 </div>
-
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-
     const sidebar = document.getElementById("netSidebar");
     const toggle = document.getElementById("sidebarToggle");
-
-    if (!sidebar || !toggle) {
-        return;
-    }
+    if (!sidebar || !toggle) return;
 
     const STORAGE_KEY = "netmonitor_sidebar";
 
     function setSidebarState(collapsed) {
-
         sidebar.classList.toggle("collapsed", collapsed);
-
-        toggle.setAttribute(
-            "aria-expanded",
-            collapsed ? "false" : "true"
-        );
-
-        localStorage.setItem(
-            STORAGE_KEY,
-            collapsed ? "collapsed" : "expanded"
-        );
+        toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        localStorage.setItem(STORAGE_KEY, collapsed ? "collapsed" : "expanded");
     }
 
-    // Load previous state
     const savedState = localStorage.getItem(STORAGE_KEY);
-
     if (savedState === "collapsed") {
         sidebar.classList.add("collapsed");
         toggle.setAttribute("aria-expanded", "false");
     }
 
-    // Toggle
     toggle.addEventListener("click", function () {
-
-        const collapsed =
-            !sidebar.classList.contains("collapsed");
-
-        setSidebarState(collapsed);
-
+        setSidebarState(!sidebar.classList.contains("collapsed"));
     });
-
 });
 </script>
+
+<!-- Dashboard PRO v4 is self-scoped and activates only on dashboard pages. -->
+<script src="../assets/js/dashboard_pro4.js?v=4"></script>
