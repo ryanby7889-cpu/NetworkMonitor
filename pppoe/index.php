@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PPPoE Management - NetMonitor</title>
-<link rel="stylesheet" href="../assets/css/variables.css?v=8"><link rel="stylesheet" href="../assets/css/common.css?v=8"><link rel="stylesheet" href="../assets/css/theme.css?v=1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="../assets/css/pppoe.css?v=14"><link rel="stylesheet" href="../assets/css/pppoe_pro.css?v=1">
+<link rel="stylesheet" href="../assets/css/variables.css?v=8"><link rel="stylesheet" href="../assets/css/common.css?v=8"><link rel="stylesheet" href="../assets/css/theme.css?v=1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="../assets/css/pppoe.css?v=14"><link rel="stylesheet" href="../assets/css/pppoe_pro.css?v=2">
 </head>
 <body>
 <?php require_once "../includes/sidebar.php"; ?>
