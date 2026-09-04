@@ -9,15 +9,33 @@ try {
     $db = new Database();
     $pdo = $db->connect();
 
-    // Dashboard follows the same stored traffic_history source as Traffic History.
-    // The latest 60 samples represent roughly the last 10 minutes with the
-    // current 10-second collector interval.
-    $stmt = $pdo->query("\n        SELECT created_at, download_mbps, upload_mbps\n        FROM traffic_history\n        WHERE interface_name = 'ether1'\n        ORDER BY created_at DESC\n        LIMIT 60\n    ");
+    // Dashboard uses the same persisted collector data as Traffic History.
+    // 60 samples at a 10-second collector interval represent about 10 minutes.
+    $stmt = $pdo->query("
+        SELECT created_at, download_mbps, upload_mbps
+        FROM traffic_history
+        WHERE interface_name = 'ether1'
+        ORDER BY created_at DESC
+        LIMIT 60
+    ");
 
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $rows = array_reverse($rows);
+    $rows = array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
 
-    $statsStmt = $pdo->query("\n        SELECT\n            COALESCE(MAX(download_mbps), 0) AS peak_download,\n            COALESCE(MAX(upload_mbps), 0) AS peak_upload\n        FROM traffic_history\n        WHERE interface_name = 'ether1'\n          AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)\n          AND created_at <= NOW()\n    ");
+    // PRO statistics use a rolling one-hour window.
+    $statsStmt = $pdo->query("
+        SELECT
+            COALESCE(MAX(download_mbps), 0) AS peak_download,
+            COALESCE(MAX(upload_mbps), 0) AS peak_upload,
+            COALESCE(AVG(download_mbps), 0) AS avg_download,
+            COALESCE(AVG(upload_mbps), 0) AS avg_upload,
+            COUNT(*) AS records,
+            COALESCE(SUM(download_mbps), 0) AS total_download_samples,
+            COALESCE(SUM(upload_mbps), 0) AS total_upload_samples
+        FROM traffic_history
+        WHERE interface_name = 'ether1'
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+          AND created_at <= NOW()
+    ");
 
     $stats = $statsStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
@@ -40,6 +58,9 @@ try {
         'uploads' => $uploads,
         'peak_download' => (float)($stats['peak_download'] ?? 0),
         'peak_upload' => (float)($stats['peak_upload'] ?? 0),
+        'avg_download' => (float)($stats['avg_download'] ?? 0),
+        'avg_upload' => (float)($stats['avg_upload'] ?? 0),
+        'records' => (int)($stats['records'] ?? 0),
         'points' => count($rows)
     ], JSON_UNESCAPED_UNICODE);
 
