@@ -1,55 +1,13 @@
 <?php
 /** NetMonitor - global alarm status endpoint PRO. */
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-try {
-    require_once __DIR__ . '/../Config/database.php';
-    $pdo = (new Database())->connect();
-    $counts = $pdo->query("SELECT COUNT(*) total,SUM(status='active') active,SUM(status='active' AND severity='critical') critical,SUM(status='active' AND severity='warning') warning FROM alarms")->fetch(PDO::FETCH_ASSOC) ?: [];
-    $alarms = $pdo->query("SELECT id,router_id,interface_name,alarm_type,severity,message,value,threshold,created_at FROM alarms WHERE status='active' ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-
-    foreach ($alarms as &$alarm) {
-        $alarm['username'] = null;
-        $alarm['direction'] = null;
-        $alarm['usage_percent'] = null;
-        $alarm['detail_url'] = null;
-        $alarm['history_url'] = null;
-        $type = strtolower((string)($alarm['alarm_type'] ?? ''));
-        $iface = trim((string)($alarm['interface_name'] ?? ''), " <>\t\n\r\0\x0B");
-        $message = (string)($alarm['message'] ?? '');
-        if (strpos($type, 'pppoe_bandwidth') === 0) {
-            if (preg_match('/^pppoe-(.+)$/i', $iface, $m)) {
-                $alarm['username'] = $m[1];
-            } elseif (preg_match('/^PPPoE\s+(.+?)\s+(?:download|upload)\s+/i', $message, $m)) {
-                $alarm['username'] = trim($m[1]);
-            }
-            if (strpos($type, 'download') !== false || preg_match('/\bdownload\b/i', $message)) {
-                $alarm['direction'] = 'DOWNLOAD';
-            } elseif (strpos($type, 'upload') !== false || preg_match('/\bupload\b/i', $message)) {
-                $alarm['direction'] = 'UPLOAD';
-            }
-            $value = is_numeric($alarm['value'] ?? null) ? (float)$alarm['value'] : 0.0;
-            $threshold = is_numeric($alarm['threshold'] ?? null) ? (float)$alarm['threshold'] : 0.0;
-            if ($threshold > 0) $alarm['usage_percent'] = round(($value / $threshold) * 100, 1);
-            if ($alarm['username'] !== null && $alarm['username'] !== '') {
-                $u = rawurlencode($alarm['username']);
-                $alarm['detail_url'] = '../pppoe/user.php?username=' . $u;
-                $alarm['history_url'] = '../pppoe/history.php?username=' . $u;
-            }
-        }
-    }
-    unset($alarm);
-
-    echo json_encode([
-        'success' => true,
-        'active' => (int)($counts['active'] ?? 0),
-        'critical' => (int)($counts['critical'] ?? 0),
-        'warning' => (int)($counts['warning'] ?? 0),
-        'history' => (int)($counts['total'] ?? 0),
-        'alarms' => $alarms,
-        'timestamp' => date('c')
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-} catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode(['success'=>false,'active'=>0,'critical'=>0,'warning'=>0,'history'=>0,'alarms'=>[]],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-}
+header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+try{
+ require_once __DIR__.'/../Config/database.php';$pdo=(new Database())->connect();
+ $rid=(int)($_GET['router_id']??0);$routerName=null;
+ if($rid<=0){$q=$pdo->query("SELECT id,router_name FROM router ORDER BY is_active DESC,CASE WHEN status='ONLINE' THEN 0 ELSE 1 END,id ASC LIMIT 1");$rr=$q->fetch(PDO::FETCH_ASSOC);$rid=(int)($rr['id']??0);$routerName=$rr['router_name']??null;}else{$q=$pdo->prepare('SELECT router_name FROM router WHERE id=? LIMIT 1');$q->execute([$rid]);$routerName=$q->fetchColumn()?:null;}
+ $where=$rid>0?' WHERE router_id=?':'';$params=$rid>0?[$rid]:[];
+ $st=$pdo->prepare("SELECT COUNT(*) total,SUM(status='active') active,SUM(status='active' AND severity='critical') critical,SUM(status='active' AND severity='warning') warning FROM alarms".$where);$st->execute($params);$counts=$st->fetch(PDO::FETCH_ASSOC)?:[];
+ $st=$pdo->prepare("SELECT id,router_id,interface_name,alarm_type,severity,message,value,threshold,created_at FROM alarms".($rid>0?' WHERE router_id=? AND status=\'active\'':' WHERE status=\'active\'').' ORDER BY created_at DESC LIMIT 10');$st->execute($params);$alarms=$st->fetchAll(PDO::FETCH_ASSOC);
+ foreach($alarms as &$alarm){$alarm['username']=null;$alarm['direction']=null;$alarm['usage_percent']=null;$alarm['detail_url']=null;$alarm['history_url']=null;$type=strtolower((string)($alarm['alarm_type']??''));$iface=trim((string)($alarm['interface_name']??'')," <>\t\n\r\0\x0B");$message=(string)($alarm['message']??'');if(strpos($type,'pppoe_bandwidth')===0){if(preg_match('/^pppoe-(.+)$/i',$iface,$m))$alarm['username']=$m[1];elseif(preg_match('/^PPPoE\s+(.+?)\s+(?:download|upload)\s+/i',$message,$m))$alarm['username']=trim($m[1]);if(strpos($type,'download')!==false||preg_match('/\bdownload\b/i',$message))$alarm['direction']='DOWNLOAD';elseif(strpos($type,'upload')!==false||preg_match('/\bupload\b/i',$message))$alarm['direction']='UPLOAD';$value=is_numeric($alarm['value']??null)?(float)$alarm['value']:0;$threshold=is_numeric($alarm['threshold']??null)?(float)$alarm['threshold']:0;if($threshold>0)$alarm['usage_percent']=round($value/$threshold*100,1);if($alarm['username']){$u=rawurlencode($alarm['username']);$r=$rid>0?'&router_id='.$rid:'';$alarm['detail_url']='../pppoe/user.php?username='.$u.$r;$alarm['history_url']='../pppoe/history.php?username='.$u.$r;}}}
+ unset($alarm);echo json_encode(['success'=>true,'router_id'=>$rid,'router_name'=>$routerName,'active'=>(int)($counts['active']??0),'critical'=>(int)($counts['critical']??0),'warning'=>(int)($counts['warning']??0),'history'=>(int)($counts['total']??0),'alarms'=>$alarms,'timestamp'=>date('c')],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+}catch(Throwable $e){http_response_code(500);echo json_encode(['success'=>false,'active'=>0,'critical'=>0,'warning'=>0,'history'=>0,'alarms'=>[],'message'=>'Alarm status unavailable']);}
