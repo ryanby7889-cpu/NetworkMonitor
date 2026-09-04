@@ -1,5 +1,5 @@
 <?php
-/** NetMonitor - global alarm status endpoint. */
+/** NetMonitor - global alarm status endpoint PRO. */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 try {
@@ -10,16 +10,27 @@ try {
 
     foreach ($alarms as &$alarm) {
         $alarm['username'] = null;
+        $alarm['direction'] = null;
+        $alarm['usage_percent'] = null;
         $alarm['detail_url'] = null;
         $alarm['history_url'] = null;
         $type = strtolower((string)($alarm['alarm_type'] ?? ''));
         $iface = trim((string)($alarm['interface_name'] ?? ''), " <>\t\n\r\0\x0B");
+        $message = (string)($alarm['message'] ?? '');
         if (strpos($type, 'pppoe_bandwidth') === 0) {
             if (preg_match('/^pppoe-(.+)$/i', $iface, $m)) {
                 $alarm['username'] = $m[1];
-            } elseif (preg_match('/^PPPoE\s+(.+?)\s+(?:download|upload)\s+/i', (string)$alarm['message'], $m)) {
+            } elseif (preg_match('/^PPPoE\s+(.+?)\s+(?:download|upload)\s+/i', $message, $m)) {
                 $alarm['username'] = trim($m[1]);
             }
+            if (strpos($type, 'download') !== false || preg_match('/\bdownload\b/i', $message)) {
+                $alarm['direction'] = 'DOWNLOAD';
+            } elseif (strpos($type, 'upload') !== false || preg_match('/\bupload\b/i', $message)) {
+                $alarm['direction'] = 'UPLOAD';
+            }
+            $value = is_numeric($alarm['value'] ?? null) ? (float)$alarm['value'] : 0.0;
+            $threshold = is_numeric($alarm['threshold'] ?? null) ? (float)$alarm['threshold'] : 0.0;
+            if ($threshold > 0) $alarm['usage_percent'] = round(($value / $threshold) * 100, 1);
             if ($alarm['username'] !== null && $alarm['username'] !== '') {
                 $u = rawurlencode($alarm['username']);
                 $alarm['detail_url'] = '../pppoe/user.php?username=' . $u;
