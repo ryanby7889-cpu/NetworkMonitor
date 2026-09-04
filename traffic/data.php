@@ -1,11 +1,14 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+date_default_timezone_set('Asia/Jakarta');
 
 require_once "../Config/database.php";
 
 try {
     $db = new Database();
     $pdo = $db->connect();
+    // Keep the API and collector on the same WIB clock.
+    $pdo->exec("SET time_zone = '+07:00'");
 
     $range = $_GET['range'] ?? '24h';
     $page = max(1, (int)($_GET['page'] ?? 1));
@@ -13,8 +16,6 @@ try {
 
     $allowedRanges = ['1h' => 1, '6h' => 6, '24h' => 24, '7d' => 168];
 
-    // IMPORTANT: preset ranges use MySQL NOW(), the same clock used by
-    // collector INSERT ... NOW(). This prevents PHP/MySQL timezone drift.
     if (isset($_GET['from'], $_GET['to']) && $_GET['from'] !== '' && $_GET['to'] !== '') {
         $from = date('Y-m-d H:i:s', strtotime($_GET['from']));
         $to = date('Y-m-d H:i:s', strtotime($_GET['to']));
@@ -57,7 +58,6 @@ try {
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Chart is capped at 500 points so long periods remain lightweight.
     $chartStmt = $pdo->prepare("SELECT interface_name, download_mbps, upload_mbps, created_at
         FROM traffic_history $where
         ORDER BY created_at DESC
