@@ -10,42 +10,59 @@ function numv($v){
     $s=trim((string)$v); if($s==='') return 0.0; if(is_numeric($s)) return (float)$s;
     if(preg_match('/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*([kmgtpe]?i?b|[kmgtpe])$/i',$s,$m)){
         $n=(float)$m[1]; $u=strtolower($m[2]); $binary=strpos($u,'i')!==false;
-        $unit=preg_replace('/i?b$/','',$u); $base=$binary?1024:1000;
-        $powers=['k'=>1,'m'=>2,'g'=>3,'t'=>4,'p'=>5,'e'=>6];
+        $unit=preg_replace('/i?b$/','',$u); $base=$binary?1024:1000; $powers=['k'=>1,'m'=>2,'g'=>3,'t'=>4,'p'=>5,'e'=>6];
         return $n*($powers[$unit]??0 ? pow($base,$powers[$unit]) : 1);
     }
     return 0.0;
 }
 function pairv($v){
-    if(is_array($v)){
-        if(array_key_exists(0,$v)||array_key_exists(1,$v)) return [numv($v[0]??0),numv($v[1]??0)];
-        $vals=array_values($v); return [numv($vals[0]??0),numv($vals[1]??0)];
-    }
-    $v=trim((string)$v); if($v==='') return [0.0,0.0];
-    $parts=preg_split('/\s*\/\s*/',$v,2); return [numv($parts[0]??0),numv($parts[1]??0)];
+    if(is_array($v)){if(array_key_exists(0,$v)||array_key_exists(1,$v))return [numv($v[0]??0),numv($v[1]??0)];$vals=array_values($v);return [numv($vals[0]??0),numv($vals[1]??0)];}
+    $v=trim((string)$v);if($v==='')return [0.0,0.0];$parts=preg_split('/\s*\/\s*/',$v,2);return [numv($parts[0]??0),numv($parts[1]??0)];
 }
 function firstv($r,$keys,$default=0){foreach($keys as $k){if(isset($r[$k])&&$r[$k]!==''&&$r[$k]!==null)return $r[$k];}return $default;}
-function active_print($api){return (array)$api->comm('/ppp/active/print',['.proplist'=>'.id,name,address,caller-id,uptime,service,session-id,bytes,packets,bytes-in,bytes-out,packets-in,packets-out']);}
+function norm_if($s){$s=strtolower(trim((string)$s));$s=trim($s,'<>');return $s;}
 try{
-    $config=new MikroTikConfig(); $router=$config->getRouter(); if(!$router) throw new Exception('Konfigurasi MikroTik tidak ditemukan.');
-    $api=new RouterosAPI(); $api->debug=false;
-    if(!$api->connect($router['ip_address'],$router['username'],$router['password'],$router['api_port'])) throw new Exception('Gagal terhubung ke MikroTik.');
-    $activeRows=active_print($api); $secretRows=(array)$api->comm('/ppp/secret/print'); $profileRows=(array)$api->comm('/ppp/profile/print');
-    $secretMap=[];
-    foreach($secretRows as $r){if(is_array($r))$secretMap[(string)($r['name']??'')]=['profile'=>$r['profile']??'default','service'=>$r['service']??'pppoe'];}
+    $config=new MikroTikConfig();$router=$config->getRouter();if(!$router)throw new Exception('Konfigurasi MikroTik tidak ditemukan.');
+    $api=new RouterosAPI();$api->debug=false;if(!$api->connect($router['ip_address'],$router['username'],$router['password'],$router['api_port']))throw new Exception('Gagal terhubung ke MikroTik.');
+
+    $activeRows=(array)$api->comm('/ppp/active/print',['.proplist'=>'.id,name,address,caller-id,uptime,service,session-id,bytes,packets']);
+    $secretRows=(array)$api->comm('/ppp/secret/print');$profileRows=(array)$api->comm('/ppp/profile/print');
+
+    /* RouterOS creates a dynamic PPPoE server interface for each connected user.
+       Interface counters are normal RX/TX byte counters and do not depend on
+       the console-only "print stats" modifier. */
+    $ifRows=(array)$api->comm('/interface/print',['.proplist'=>'.id,name,type,rx-byte,tx-byte,rx-packet,tx-packet']);
+    $ifMap=[];
+    foreach($ifRows as $ir){
+        if(!is_array($ir))continue;
+        $iname=(string)($ir['name']??'');$key=norm_if($iname);if($key!=='')$ifMap[$key]=$ir;
+        if(str_starts_with($key,'pppoe-'))$ifMap[substr($key,6)]=$ir;
+    }
+
+    $secretMap=[];foreach($secretRows as $r){if(is_array($r))$secretMap[(string)($r['name']??'')]=['profile'=>$r['profile']??'default','service'=>$r['service']??'pppoe'];}
     $active=[];$totalRx=0.0;$totalTx=0.0;
     foreach($activeRows as $r){
-        if(!is_array($r))continue; $name=(string)($r['name']??'-');
+        if(!is_array($r))continue;$name=(string)($r['name']??'-');
+        /* First try PPP active bytes. On RouterOS 7.24 this can be unavailable
+           through the legacy API, so fall back to the dynamic interface. */
         [$txPair,$rxPair]=pairv($r['bytes']??'');
-        $rx=numv(firstv($r,['bytes-in','rx-byte','rx_bytes'],0)); $tx=numv(firstv($r,['bytes-out','tx-byte','tx_bytes'],0));
-        if($rx<=0&&$rxPair>0)$rx=$rxPair; if($tx<=0&&$txPair>0)$tx=$txPair;
-        [$pktTx,$pktRx]=pairv($r['packets']??''); $pin=numv(firstv($r,['packets-in','rx-packet'],0)); $pout=numv(firstv($r,['packets-out','tx-packet'],0));
-        if($pin<=0&&$pktRx>0)$pin=$pktRx; if($pout<=0&&$pktTx>0)$pout=$pktTx;
+        $rx=numv(firstv($r,['bytes-in','rx-byte','rx_bytes'],0));$tx=numv(firstv($r,['bytes-out','tx-byte','tx_bytes'],0));
+        if($rx<=0&&$rxPair>0)$rx=$rxPair;if($tx<=0&&$txPair>0)$tx=$txPair;
+        $candidates=[norm_if($name),'pppoe-'.norm_if($name),'<pppoe-'.norm_if($name).'>'];$ir=null;
+        foreach($candidates as $c){$k=norm_if($c);if(isset($ifMap[$k])){$ir=$ifMap[$k];break;}}
+        if($ir){
+            $ifRx=numv(firstv($ir,['rx-byte'],0));$ifTx=numv(firstv($ir,['tx-byte'],0));
+            /* Interface counters are authoritative when PPP active counters are zero. */
+            if($ifRx>0||$ifTx>0){$rx=$ifRx;$tx=$ifTx;}
+        }
+        [$pktTx,$pktRx]=pairv($r['packets']??'');$pin=numv(firstv($r,['packets-in','rx-packet'],0));$pout=numv(firstv($r,['packets-out','tx-packet'],0));
+        if($ir){$pin=numv(firstv($ir,['rx-packet'],$pin));$pout=numv(firstv($ir,['tx-packet'],$pout));}
+        if($pin<=0&&$pktRx>0)$pin=$pktRx;if($pout<=0&&$pktTx>0)$pout=$pktTx;
         $totalRx+=$rx;$totalTx+=$tx;
-        $active[]=['id'=>$r['.id']??'','name'=>$name,'address'=>$r['address']??'-','caller_id'=>$r['caller-id']??'-','uptime'=>$r['uptime']??'-','service'=>$r['service']??($secretMap[$name]['service']??'pppoe'),'profile'=>$secretMap[$name]['profile']??'default','bytes_in'=>$rx,'bytes_out'=>$tx,'total_bytes'=>$rx+$tx,'packets_in'=>$pin,'packets_out'=>$pout,'session_id'=>$r['session-id']??'-'];
+        $active[]=['id'=>$r['.id']??'','name'=>$name,'address'=>$r['address']??'-','caller_id'=>$r['caller-id']??'-','uptime'=>$r['uptime']??'-','service'=>$r['service']??($secretMap[$name]['service']??'pppoe'),'profile'=>$secretMap[$name]['profile']??'default','bytes_in'=>$rx,'bytes_out'=>$tx,'total_bytes'=>$rx+$tx,'packets_in'=>$pin,'packets_out'=>$pout,'session_id'=>$r['session-id']??'-','interface'=>$ir['name']??''];
     }
-    $enabled=0;$disabled=0;$services=[];$profileUsage=[];
-    foreach($secretRows as $r){if(!is_array($r))continue;$d=(($r['disabled']??'false')==='true');if($d)$disabled++;else$enabled++;$s=$r['service']??'pppoe';$services[$s]=($services[$s]??0)+1;$p=$r['profile']??'default';$profileUsage[$p]=($profileUsage[$p]??0)+1;}
-    usort($active,fn($a,$b)=>$b['total_bytes']<=>$a['total_bytes']); $api->disconnect();
+
+    $enabled=0;$disabled=0;$services=[];$profileUsage=[];foreach($secretRows as $r){if(!is_array($r))continue;$d=(($r['disabled']??'false')==='true');if($d)$disabled++;else$enabled++;$s=$r['service']??'pppoe';$services[$s]=($services[$s]??0)+1;$p=$r['profile']??'default';$profileUsage[$p]=($profileUsage[$p]??0)+1;}
+    usort($active,fn($a,$b)=>$b['total_bytes']<=>$a['total_bytes']);$api->disconnect();
     pppoe_json(true,'',['active_count'=>count($active),'account_count'=>count($secretRows),'profile_count'=>count($profileRows),'enabled_accounts'=>$enabled,'disabled_accounts'=>$disabled,'total_rx_bytes'=>$totalRx,'total_tx_bytes'=>$totalTx,'total_traffic_bytes'=>$totalRx+$totalTx,'active'=>$active,'top_users'=>array_slice($active,0,5),'services'=>$services,'profile_usage'=>$profileUsage,'updated_at'=>date('Y-m-d H:i:s')]);
 }catch(Throwable $e){pppoe_json(false,$e->getMessage(),[],500);}
