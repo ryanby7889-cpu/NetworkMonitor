@@ -1,76 +1,32 @@
-/* NetMonitor PPPoE Management PRO — pagination, CRUD modals and safe actions */
+/* NetMonitor PPPoE Management PRO v2 */
 (function(){
 'use strict';
 if(!location.pathname.toLowerCase().includes('/pppoe/')) return;
 const api='../api/pppoe.php';
 const $=id=>document.getElementById(id);
-const state={active:[],secrets:[],profiles:[],activePage:1,secretPage:1,profilePage:1,perPage:10};
+const S={active:[],secrets:[],profiles:[],ap:1,sp:1,pp:1,per:8,filter:'all'};
 const esc=v=>{const d=document.createElement('div');d.textContent=v??'';return d.innerHTML};
-async function request(action, data){
- const opt={method:data?'POST':'GET',cache:'no-store',headers:{'X-Requested-With':'XMLHttpRequest'}};
- if(data) opt.body=data;
- const r=await fetch(api+'?action='+encodeURIComponent(action)+'&t='+Date.now(),opt);
- let d={}; try{d=await r.json()}catch(e){}
- if(!r.ok||!d.success) throw Error(d.message||'Request gagal');
- return d;
+const req=async(action,data)=>{const o={method:data?'POST':'GET',cache:'no-store',headers:{'X-Requested-With':'XMLHttpRequest'}};if(data)o.body=data;const r=await fetch(api+'?action='+encodeURIComponent(action)+'&t='+Date.now(),o);let d={};try{d=await r.json()}catch(e){}if(!r.ok||!d.success)throw Error(d.message||'Request gagal');return d};
+function styles(){if($('pppMgmtStyle'))return;const s=document.createElement('style');s.id='pppMgmtStyle';s.textContent=`
+.ppp-mgmt-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;border-top:1px solid var(--border);color:var(--muted);font-size:10px}.ppp-mgmt-footer .pager{display:flex;gap:4px}.ppp-mgmt-footer button{min-width:29px;height:28px;padding:3px 8px;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--text);font-size:11px}.ppp-mgmt-footer button:disabled{opacity:.4}.ppp-mgmt-per{height:30px;padding:3px 7px;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--text);font-size:10px}.ppp-mgmt-empty{padding:26px!important;text-align:center;color:var(--muted)}
+`;document.head.appendChild(s)}
+function footer(tbody,kind,total,page,setPage){const old=tbody.closest('.pppoe-card').querySelector('.ppp-mgmt-footer');if(old)old.remove();const card=tbody.closest('.pppoe-card');const pages=Math.max(1,Math.ceil(total/S.per));const f=document.createElement('div');f.className='ppp-mgmt-footer';f.innerHTML=`<span>${total} data • Halaman ${Math.min(page,pages)} / ${pages}</span><div class="pager"><button data-p="first" ${page<=1?'disabled':''}>«</button><button data-p="prev" ${page<=1?'disabled':''}>‹</button><select class="ppp-mgmt-per"><option value="8">8</option><option value="15">15</option><option value="25">25</option></select><button data-p="next" ${page>=pages?'disabled':''}>›</button><button data-p="last" ${page>=pages?'disabled':''}>»</button></div>`;card.appendChild(f);f.querySelector('select').value=String(S.per);f.querySelector('select').onchange=e=>{S.per=Number(e.target.value)||8;S.ap=S.sp=S.pp=1;render()};f.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const x=b.dataset.p;if(x==='first')setPage(1);if(x==='prev')setPage(Math.max(1,page-1));if(x==='next')setPage(Math.min(pages,page+1));if(x==='last')setPage(pages);render()})}
+function slice(a,p){return a.slice((p-1)*S.per,p*S.per)}
+function rowActive(x,i){return `<tr><td>${i+1}</td><td><span class="pppoe-user-name"><span class="pppoe-user-dot"></span>${esc(x.name)}</span></td><td class="pppoe-mono">${esc(x.address)}</td><td class="pppoe-mono">${esc(x.caller_id)}</td><td>${esc(x.uptime)}</td><td>${esc(x.service)}</td><td><button class="btn btn-danger btn-small" data-disconnect="${esc(x.id)}">Disconnect</button></td></tr>`}
+function rowSecret(x,i){return `<tr><td>${i+1}</td><td><span class="pppoe-user-name"><span class="pppoe-user-dot"></span>${esc(x.name)}</span></td><td>${esc(x.service)}</td><td><span class="pppoe-profile-pill">${esc(x.profile)}</span></td><td><span class="status-pill ${x.disabled?'disabled':'enabled'}">${x.disabled?'DISABLED':'ENABLED'}</span></td><td class="pppoe-mono">${esc(x.local_address)}</td><td class="pppoe-mono">${esc(x.remote_address)}</td><td class="pppoe-muted">${esc(x.comment)}</td><td><span class="action-group"><button class="btn btn-small btn-primary" data-edit-secret="${esc(x.id)}">Edit</button><button class="btn btn-small ${x.disabled?'btn-success':'btn-warning'}" data-toggle="${esc(x.id)}" data-disabled="${x.disabled?1:0}">${x.disabled?'Enable':'Disable'}</button><button class="btn btn-danger btn-small" data-remove="${esc(x.id)}">Delete</button></span></td></tr>`}
+function rowProfile(x,i){return `<tr><td>${i+1}</td><td><span class="pppoe-profile-pill">${esc(x.name)}</span></td><td class="pppoe-mono">${esc(x.local_address)}</td><td class="pppoe-mono">${esc(x.remote_address)}</td><td><strong>${esc(x.rate_limit||'-')}</strong></td><td>${esc(x.only_one||'default')}</td><td><span class="action-group"><button class="btn btn-small btn-primary" data-edit-profile="${esc(x.id)}">Edit</button><button class="btn btn-danger btn-small" data-remove-profile="${esc(x.id)}">Delete</button></span></td></tr>`}
+function render(){
+ let q=($('sessionSearch')?.value||'').toLowerCase();let a=S.active.filter(x=>[x.name,x.address,x.caller_id].join(' ').toLowerCase().includes(q));let ap=Math.min(S.ap,Math.max(1,Math.ceil(a.length/S.per)));S.ap=ap;let ar=slice(a,ap);$('activeTable').innerHTML=ar.length?ar.map(rowActive).join(''):'<tr><td colspan="7" class="ppp-mgmt-empty">Tidak ada active session.</td></tr>';footer($('activeTable'),'a',a.length,ap,p=>S.ap=p);
+ q=($('secretSearch')?.value||'').toLowerCase();let s=S.secrets.filter(x=>[x.name,x.profile,x.service,x.local_address,x.remote_address,x.comment].join(' ').toLowerCase().includes(q));if(S.filter==='enabled')s=s.filter(x=>!x.disabled);if(S.filter==='disabled')s=s.filter(x=>x.disabled);let sp=Math.min(S.sp,Math.max(1,Math.ceil(s.length/S.per)));S.sp=sp;let sr=slice(s,sp);$('secretTable').innerHTML=sr.length?sr.map(rowSecret).join(''):'<tr><td colspan="9" class="ppp-mgmt-empty">Tidak ada account PPPoE.</td></tr>';footer($('secretTable'),'s',s.length,sp,p=>S.sp=p);
+ let p=S.profiles;let pp=Math.min(S.pp,Math.max(1,Math.ceil(p.length/S.per)));S.pp=pp;let pr=slice(p,pp);$('profileTable').innerHTML=pr.length?pr.map(rowProfile).join(''):'<tr><td colspan="7" class="ppp-mgmt-empty">Tidak ada profile PPPoE.</td></tr>';footer($('profileTable'),'p',p.length,pp,n=>S.pp=n);
 }
-function pager(id,page,total,cb){
- const pages=Math.max(1,Math.ceil(total/state.perPage));
- page=Math.min(page,pages);
- let el=$(id); if(!el)return;
- el.innerHTML=`<div class="ppp-mgmt-pager"><span>${total} data • Halaman ${page}/${pages}</span><div><button type="button" class="btn btn-small btn-secondary" data-page="prev" ${page<=1?'disabled':''}>‹</button><button type="button" class="btn btn-small btn-secondary" data-page="next" ${page>=pages?'disabled':''}>›</button></div></div>`;
- el.querySelector('[data-page="prev"]')?.addEventListener('click',()=>cb(page-1));
- el.querySelector('[data-page="next"]')?.addEventListener('click',()=>cb(page+1));
-}
-function pageSlice(a,p){return a.slice((p-1)*state.perPage,p*state.perPage)}
-function addPagerStyles(){
- const s=document.createElement('style');s.textContent=`
- .ppp-mgmt-pager{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 14px;border-top:1px solid var(--border);color:var(--muted);font-size:10px}
- .ppp-mgmt-pager>div{display:flex;gap:5px}.ppp-mgmt-pager button{min-width:30px}.ppp-mgmt-pager button:disabled{opacity:.45;cursor:not-allowed}
- .ppp-mgmt-tools{display:flex;align-items:center;gap:6px}.ppp-mgmt-select{height:32px;padding:4px 8px;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--text);font-size:11px}
- .pppoe-modal-dialog{z-index:2}.pppoe-modal-backdrop{z-index:1}
- `;document.head.appendChild(s);
-}
-function close(id){$(id)?.setAttribute('hidden','')}
-function open(id){$(id)?.removeAttribute('hidden')}
-function fillProfileSelect(selected){const s=$('profileSelect');if(!s)return;s.innerHTML=state.profiles.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('')||'<option value="default">default</option>';if(selected)s.value=selected}
-function formData(form){return new FormData(form)}
-async function saveUser(e){e.preventDefault();const f=e.currentTarget;const id=f.elements.id.value.trim();const action=id?'edit_secret':'create_secret';const btn=$('saveUserBtn');btn.disabled=true;try{await request(action,formData(f));close('userModal');await window.pppoeRefresh?.();}catch(err){showForm('formMessage',err.message,true)}finally{btn.disabled=false}}
-async function saveProfile(e){e.preventDefault();const f=e.currentTarget;const id=f.elements.id.value.trim();const action=id?'edit_profile':'create_profile';const btn=$('saveProfileBtn');btn.disabled=true;try{await request(action,formData(f));close('profileModal');await window.pppoeRefresh?.();}catch(err){showForm('profileFormMessage',err.message,true)}finally{btn.disabled=false}}
-function showForm(id,text,error){const el=$(id);if(!el)return;el.textContent=text;el.hidden=!text;el.classList.toggle('error',!!error)}
-function resetUser(x){const f=$('userForm');if(!f)return;f.reset();f.elements.id.value=x?.id||'';f.elements.name.value=x?.name||'';f.elements.password.value='';f.elements.service.value=x?.service||'pppoe';fillProfileSelect(x?.profile||'default');f.elements.local_address.value=x?.local_address||'';f.elements.remote_address.value=x?.remote_address||'';f.elements.comment.value=x?.comment||'';$('userModalTitle').textContent=x?'Edit User PPPoE':'Tambah User PPPoE';$('saveUserBtn').textContent=x?'Simpan Perubahan':'Simpan User';showForm('formMessage','',false);open('userModal');setTimeout(()=>f.elements.name.focus(),50)}
-function resetProfile(x){const f=$('profileForm');if(!f)return;f.reset();f.elements.id.value=x?.id||'';f.elements.name.value=x?.name||'';f.elements.rate_limit.value=x?.rate_limit||'';f.elements.local_address.value=x?.local_address||'';f.elements.remote_address.value=x?.remote_address||'';f.elements.only_one.value=x?.only_one||'';f.elements.comment.value=x?.comment||'';$('profileModalTitle').textContent=x?'Edit Profile PPPoE':'Tambah Profile PPPoE';$('saveProfileBtn').textContent=x?'Simpan Perubahan':'Simpan Profile';showForm('profileFormMessage','',false);open('profileModal');setTimeout(()=>f.elements.name.focus(),50)}
-async function actionSecret(action,id,label){if(!id)return;if(!confirm(label+'?'))return;try{await request(action,new URLSearchParams({id}));await window.pppoeRefresh?.()}catch(e){alert(e.message)}}
-async function actionProfile(action,id,label){if(!id)return;if(!confirm(label+'?'))return;try{await request(action,new URLSearchParams({id}));await window.pppoeRefresh?.()}catch(e){alert(e.message)}}
-function attach(){
- addPagerStyles();
- $('addUserBtn')?.addEventListener('click',()=>resetUser());$('addProfileBtn')?.addEventListener('click',()=>resetProfile());
- $('userForm')?.addEventListener('submit',saveUser);$('profileForm')?.addEventListener('submit',saveProfile);
- document.addEventListener('click',e=>{
-  const closeBtn=e.target.closest('[data-close-modal]');if(closeBtn){close('userModal');return}
-  const closeProfile=e.target.closest('[data-close-profile]');if(closeProfile){close('profileModal');return}
-  const ed=e.target.closest('[data-edit-secret]');if(ed){const x=state.secrets.find(v=>String(v.id)===String(ed.dataset.editSecret));if(x)resetUser(x);return}
-  const ep=e.target.closest('[data-edit-profile]');if(ep){const x=state.profiles.find(v=>String(v.id)===String(ep.dataset.editProfile));if(x)resetProfile(x);return}
-  const dis=e.target.closest('[data-disconnect]');if(dis){actionSecret('disconnect',dis.dataset.disconnect,'Disconnect session');return}
-  const tog=e.target.closest('[data-toggle]');if(tog){actionSecret(tog.dataset.disabled==='1'?'enable_secret':'disable_secret',tog.dataset.toggle,tog.dataset.disabled==='1'?'Enable user':'Disable user');return}
-  const rem=e.target.closest('[data-remove]');if(rem){actionSecret('delete_secret',rem.dataset.remove,'Hapus user PPPoE');return}
-  const rp=e.target.closest('[data-remove-profile]');if(rp){actionProfile('delete_profile',rp.dataset.removeProfile,'Hapus profile PPPoE');return}
- });
-}
-function installRefreshHook(){
- const original=window.pppoeRefresh;
- window.pppoeRefresh=async function(){
-  if(typeof original==='function') await original();
-  state.active=window.pppoeData?.active||state.active;state.secrets=window.pppoeData?.secrets||state.secrets;state.profiles=window.pppoeData?.profiles||state.profiles;
-  fillProfileSelect();
-  setTimeout(ensurePagers,30);
- };
-}
-function ensurePagers(){
- ['activeTable','secretTable','profileTable'].forEach((id,i)=>{const tbody=$(id);if(!tbody||!tbody.parentElement)return;let p=tbody.parentElement.parentElement.querySelector('.ppp-mgmt-pager-wrap');if(!p){p=document.createElement('div');p.className='ppp-mgmt-pager-wrap';tbody.parentElement.parentElement.appendChild(p)}const arr=i===0?state.active:i===1?state.secrets:state.profiles;const pg=i===0?state.activePage:i===1?state.secretPage:state.profilePage;pager(p,pg,arr.length,n=>{if(i===0)state.activePage=n;else if(i===1)state.secretPage=n;else state.profilePage=n;renderPaged()})});}
-function renderPaged(){
- const render=(id,arr,page)=>{const tbody=$(id);if(!tbody)return;const rows=pageSlice(arr,page);tbody.querySelectorAll('tr').forEach(r=>r.style.display='');/* Pagination is applied by hiding rows already rendered by the page script. */const all=Array.from(tbody.children);all.forEach((r,i)=>r.style.display=(i>=0&&i<rows.length)?'':'none');};
- render('activeTable',state.active,state.activePage);render('secretTable',state.secrets,state.secretPage);render('profileTable',state.profiles,state.profilePage);ensurePagers();
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach);else attach();
+async function load(silent){try{const [a,se,p]=await Promise.all([req('active'),req('secrets'),req('profiles')]);S.active=a.users||[];S.secrets=se.secrets||[];S.profiles=p.profiles||[];$('activeCount').textContent=S.active.length;$('secretCount').textContent=S.secrets.length;$('profileCount').textContent=S.profiles.length;fillProfiles();render()}catch(e){if(!silent&&$('messageBox')){const b=$('messageBox');b.textContent=e.message;b.hidden=false;b.classList.add('error')}}}
+function fillProfiles(selected){const s=$('profileSelect');if(!s)return;s.innerHTML=(S.profiles.length?S.profiles:[{name:'default'}]).map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');if(selected)s.value=selected}
+function modal(id,on){const x=$(id);if(x)x.hidden=!on}
+function userModal(x){const f=$('userForm');if(!f)return;f.reset();f.elements.id.value=x?.id||'';f.elements.name.value=x?.name||'';f.elements.password.value='';f.elements.service.value=x?.service||'pppoe';fillProfiles(x?.profile||'default');f.elements.local_address.value=x?.local_address||'';f.elements.remote_address.value=x?.remote_address||'';f.elements.comment.value=x?.comment||'';$('userModalTitle').textContent=x?'Edit User PPPoE':'Tambah User PPPoE';$('saveUserBtn').textContent=x?'Simpan Perubahan':'Simpan User';modal('userModal',true)}
+function profileModal(x){const f=$('profileForm');if(!f)return;f.reset();f.elements.id.value=x?.id||'';f.elements.name.value=x?.name||'';f.elements.rate_limit.value=x?.rate_limit||'';f.elements.local_address.value=x?.local_address||'';f.elements.remote_address.value=x?.remote_address||'';f.elements.only_one.value=x?.only_one||'';f.elements.comment.value=x?.comment||'';$('profileModalTitle').textContent=x?'Edit Profile PPPoE':'Tambah Profile PPPoE';$('saveProfileBtn').textContent=x?'Simpan Perubahan':'Simpan Profile';modal('profileModal',true)}
+async function save(e,type){e.preventDefault();const f=e.currentTarget;const id=f.elements.id.value.trim();const action=type==='user'?(id?'edit_secret':'create_secret'):(id?'edit_profile':'create_profile');const b=type==='user'?$('saveUserBtn'):$('saveProfileBtn');b.disabled=true;try{await req(action,new FormData(f));modal(type==='user'?'userModal':'profileModal',false);await load(true)}catch(err){const box=$(type==='user'?'formMessage':'profileFormMessage');if(box){box.textContent=err.message;box.hidden=false;box.classList.add('error')}}finally{b.disabled=false}}
+async function act(action,id,label){if(!id||!confirm(label+'?'))return;try{await req(action,new URLSearchParams({id}));await load(true)}catch(e){alert(e.message)}}
+function bind(){styles();$('addUserBtn')?.addEventListener('click',()=>userModal());$('addProfileBtn')?.addEventListener('click',()=>profileModal());$('userForm')?.addEventListener('submit',e=>save(e,'user'));$('profileForm')?.addEventListener('submit',e=>save(e,'profile'));$('sessionSearch')?.addEventListener('input',()=>{S.ap=1;render()});$('secretSearch')?.addEventListener('input',()=>{S.sp=1;render()});document.querySelectorAll('[data-pro-filter]').forEach(b=>b.addEventListener('click',()=>{S.filter=b.dataset.proFilter;S.sp=1;render()}));document.addEventListener('click',e=>{let x=e.target.closest('[data-close-modal]');if(x)modal('userModal',false);x=e.target.closest('[data-close-profile]');if(x)modal('profileModal',false);x=e.target.closest('[data-edit-secret]');if(x)userModal(S.secrets.find(v=>String(v.id)===String(x.dataset.editSecret)));x=e.target.closest('[data-edit-profile]');if(x)profileModal(S.profiles.find(v=>String(v.id)===String(x.dataset.editProfile)));x=e.target.closest('[data-disconnect]');if(x)act('disconnect',x.dataset.disconnect,'Disconnect session');x=e.target.closest('[data-toggle]');if(x)act(x.dataset.disabled==='1'?'enable_secret':'disable_secret',x.dataset.toggle,x.dataset.disabled==='1'?'Enable user':'Disable user');x=e.target.closest('[data-remove]');if(x)act('delete_secret',x.dataset.remove,'Hapus user PPPoE');x=e.target.closest('[data-remove-profile]');if(x)act('delete_profile',x.dataset.removeProfile,'Hapus profile PPPoE')});load(false);setInterval(()=>{if(document.visibilityState==='visible')load(true)},10000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
