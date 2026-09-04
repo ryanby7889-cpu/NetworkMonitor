@@ -1,17 +1,12 @@
 // Shared Network Monitor UI behavior.
-// Global light/dark theme is persisted across every page.
+// Global light/dark theme + Traffic History + Dashboard PRO v3.
 (function () {
     const THEME_KEY = 'netmonitor_theme';
-
-    function isDark() {
-        return document.body.classList.contains('dark');
-    }
 
     function applyTheme(theme) {
         const dark = theme === 'dark';
         document.body.classList.toggle('dark', dark);
         document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-
         document.querySelectorAll('[data-theme-toggle], #darkMode').forEach((button) => {
             const icon = button.querySelector('i');
             if (icon) icon.className = dark ? 'bi bi-sun' : 'bi bi-moon';
@@ -21,21 +16,13 @@
     }
 
     function toggleTheme() {
-        const next = isDark() ? 'light' : 'dark';
+        const next = document.body.classList.contains('dark') ? 'light' : 'dark';
         localStorage.setItem(THEME_KEY, next);
         applyTheme(next);
     }
 
-    const saved = localStorage.getItem(THEME_KEY);
-    document.addEventListener('DOMContentLoaded', () => applyTheme(
-        saved === 'dark' || saved === 'light'
-            ? saved
-            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    ), { once: true });
-
     document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.add('app-ready');
-
         let buttons = document.querySelectorAll('[data-theme-toggle], #darkMode');
         if (!buttons.length) {
             const button = document.createElement('button');
@@ -46,17 +33,15 @@
             document.body.appendChild(button);
             buttons = document.querySelectorAll('[data-theme-toggle], #darkMode');
         }
-
         buttons.forEach((button) => {
             if (button.dataset.themeBound === '1') return;
             button.dataset.themeBound = '1';
             button.addEventListener('click', toggleTheme);
         });
-
-        applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+        const saved = localStorage.getItem(THEME_KEY);
+        applyTheme(saved === 'dark' || saved === 'light' ? saved : 'light');
         initTrafficHistory();
-        initDashboardHistory();
-        initDashboardProV2();
+        initDashboardProV3();
     });
 
     function initTrafficHistory() {
@@ -70,7 +55,7 @@
         let currentTo = config.to || '';
         let currentPage = 1;
         let currentPerPage = 25;
-        let timer;
+        let timer = null;
         let busy = false;
         let trafficChart = null;
 
@@ -85,145 +70,157 @@
                 options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: c => c.dataset.label + ' : ' + Number(c.parsed.y).toFixed(2) + ' Mbps' } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, title: { display: true, text: 'Traffic (Mbps)' } } } }
             });
         }
-
         function apiUrl(page = currentPage) {
-            const params = new URLSearchParams();
-            params.set('range', currentRange); params.set('page', page); params.set('per_page', currentPerPage);
-            if (currentRange === 'custom' && currentFrom && currentTo) { params.set('from', currentFrom); params.set('to', currentTo); }
-            return 'data.php?' + params.toString();
+            const p = new URLSearchParams({ range: currentRange, page, per_page: currentPerPage });
+            if (currentRange === 'custom' && currentFrom && currentTo) { p.set('from', currentFrom); p.set('to', currentTo); }
+            return 'data.php?' + p.toString();
         }
-
         async function refreshTraffic(page = currentPage) {
             if (busy || document.visibilityState !== 'visible') return;
             busy = true;
             try {
-                const response = await fetch(apiUrl(page), { cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                const result = await response.json();
+                const r = await fetch(apiUrl(page), { cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const result = await r.json();
                 if (!result.success) throw new Error(result.message || 'Traffic data error');
                 currentPage = Number(result.page) || 1;
-                updateStats(result.stats || {}); updateTable(result.data || []); updatePagination(result.page, result.totalPages, result.total);
-                updateRangeText(result.from, result.to, result.total); updateChart(result.labels || [], result.downloads || [], result.uploads || []); updateRangeButtons(); updateExportLink();
-            } catch (error) { console.warn('Traffic History refresh gagal:', error.message); }
+                updateStats(result.stats || {});
+                updateTable(result.data || []);
+                updatePagination(result.page, result.totalPages, result.total);
+                updateRangeText(result.from, result.to, result.total);
+                updateChart(result.labels || [], result.downloads || [], result.uploads || []);
+                updateRangeButtons();
+                updateExportLink();
+            } catch (e) { console.warn('Traffic History refresh gagal:', e.message); }
             finally { busy = false; }
         }
-
-        function updateStats(stats) {
-            const records = document.getElementById('statRecords'); const maxDownload = document.getElementById('statMaxDownload'); const maxUpload = document.getElementById('statMaxUpload'); const avgDownload = document.getElementById('statAvgDownload');
-            if (records) records.textContent = Number(stats.records || 0).toLocaleString('id-ID');
-            if (maxDownload) maxDownload.textContent = Number(stats.maxDownload || 0).toFixed(2) + ' Mbps';
-            if (maxUpload) maxUpload.textContent = Number(stats.maxUpload || 0).toFixed(2) + ' Mbps';
-            if (avgDownload) avgDownload.textContent = Number(stats.avgDownload || 0).toFixed(2) + ' Mbps';
+        function updateStats(s) {
+            const ids = { records: 'statRecords', maxDownload: 'statMaxDownload', maxUpload: 'statMaxUpload', avgDownload: 'statAvgDownload' };
+            if (document.getElementById(ids.records)) document.getElementById(ids.records).textContent = Number(s.records || 0).toLocaleString('id-ID');
+            if (document.getElementById(ids.maxDownload)) document.getElementById(ids.maxDownload).textContent = Number(s.maxDownload || 0).toFixed(2) + ' Mbps';
+            if (document.getElementById(ids.maxUpload)) document.getElementById(ids.maxUpload).textContent = Number(s.maxUpload || 0).toFixed(2) + ' Mbps';
+            if (document.getElementById(ids.avgDownload)) document.getElementById(ids.avgDownload).textContent = Number(s.avgDownload || 0).toFixed(2) + ' Mbps';
         }
-
         function updateTable(rows) {
             const tbody = document.getElementById('trafficTableBody'); if (!tbody) return;
             if (!rows.length) { tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted">Tidak ada data pada periode tersebut.</td></tr>'; return; }
-            tbody.innerHTML = rows.map(row => `<tr><td>${escapeHtml(row.created_at)}</td><td><span class="badge-interface">${escapeHtml(row.interface_name)}</span></td><td class="download">${Number(row.download_mbps || 0).toFixed(2)} Mbps</td><td class="upload">${Number(row.upload_mbps || 0).toFixed(2)} Mbps</td><td>${Number(row.rx_packet || 0).toLocaleString('id-ID')} pkt/s</td><td>${Number(row.tx_packet || 0).toLocaleString('id-ID')} pkt/s</td><td>${Number(row.cpu || 0).toFixed(1)} %</td><td>${Number(row.memory || 0).toFixed(1)} %</td><td>${Number(row.disk || 0).toFixed(1)} %</td></tr>`).join('');
+            tbody.innerHTML = rows.map(row => `<tr><td>${esc(row.created_at)}</td><td><span class="badge-interface">${esc(row.interface_name)}</span></td><td class="download">${Number(row.download_mbps || 0).toFixed(2)} Mbps</td><td class="upload">${Number(row.upload_mbps || 0).toFixed(2)} Mbps</td><td>${Number(row.rx_packet || 0).toLocaleString('id-ID')} pkt/s</td><td>${Number(row.tx_packet || 0).toLocaleString('id-ID')} pkt/s</td><td>${Number(row.cpu || 0).toFixed(1)} %</td><td>${Number(row.memory || 0).toFixed(1)} %</td><td>${Number(row.disk || 0).toFixed(1)} %</td></tr>`).join('');
         }
-
         function updateChart(labels, downloads, uploads) {
             if (!trafficChart) { createChart(labels, downloads, uploads); return; }
             trafficChart.data.labels = labels; trafficChart.data.datasets[0].data = downloads; trafficChart.data.datasets[1].data = uploads; trafficChart.update('none');
         }
-
         function updatePagination(page, totalPages, total) {
-            const info = document.getElementById('paginationInfo'); const container = document.getElementById('paginationButtons'); if (!container) return;
-            const safeTotalPages = Math.max(1, Number(totalPages || 1)); const safePage = Math.max(1, Number(page || 1)); const safeTotal = Number(total || 0);
-            const first = safeTotal ? ((safePage - 1) * currentPerPage) + 1 : 0; const last = Math.min(safePage * currentPerPage, safeTotal);
-            if (info) info.textContent = safeTotal ? `Menampilkan ${first}–${last} dari ${safeTotal.toLocaleString('id-ID')} data` : '0 data';
-            const buttons = []; buttons.push(`<button class="page-btn" data-page="${safePage - 1}" ${safePage <= 1 ? 'disabled' : ''} aria-label="Sebelumnya">‹</button>`);
-            const start = Math.max(1, safePage - 2); const end = Math.min(safeTotalPages, safePage + 2);
-            if (start > 1) buttons.push('<button class="page-btn" data-page="1">1</button>'); if (start > 2) buttons.push('<span class="history-meta">…</span>');
-            for (let i = start; i <= end; i++) buttons.push(`<button class="page-btn ${i === safePage ? 'active' : ''}" data-page="${i}">${i}</button>`);
-            if (end < safeTotalPages - 1) buttons.push('<span class="history-meta">…</span>'); if (end < safeTotalPages) buttons.push(`<button class="page-btn" data-page="${safeTotalPages}">${safeTotalPages}</button>`);
-            buttons.push(`<button class="page-btn" data-page="${safePage + 1}" ${safePage >= safeTotalPages ? 'disabled' : ''} aria-label="Berikutnya">›</button>`);
-            container.innerHTML = buttons.join(''); container.querySelectorAll('.page-btn:not(:disabled)').forEach(btn => btn.addEventListener('click', () => refreshTraffic(Number(btn.dataset.page))));
+            const info = document.getElementById('paginationInfo'), container = document.getElementById('paginationButtons'); if (!container) return;
+            const tp = Math.max(1, Number(totalPages || 1)), pg = Math.max(1, Number(page || 1)), t = Number(total || 0);
+            if (info) info.textContent = t ? `Menampilkan ${((pg - 1) * currentPerPage) + 1}–${Math.min(pg * currentPerPage, t)} dari ${t.toLocaleString('id-ID')} data` : '0 data';
+            const b = [`<button class="page-btn" data-page="${pg - 1}" ${pg <= 1 ? 'disabled' : ''}>‹</button>`];
+            const start = Math.max(1, pg - 2), end = Math.min(tp, pg + 2);
+            if (start > 1) b.push('<button class="page-btn" data-page="1">1</button>'); if (start > 2) b.push('<span class="history-meta">…</span>');
+            for (let i = start; i <= end; i++) b.push(`<button class="page-btn ${i === pg ? 'active' : ''}" data-page="${i}">${i}</button>`);
+            if (end < tp - 1) b.push('<span class="history-meta">…</span>'); if (end < tp) b.push(`<button class="page-btn" data-page="${tp}">${tp}</button>`);
+            b.push(`<button class="page-btn" data-page="${pg + 1}" ${pg >= tp ? 'disabled' : ''}>›</button>`);
+            container.innerHTML = b.join(''); container.querySelectorAll('.page-btn:not(:disabled)').forEach(x => x.addEventListener('click', () => refreshTraffic(Number(x.dataset.page))));
         }
-
-        function updateRangeButtons() { document.querySelectorAll('[data-range]').forEach(btn => btn.classList.toggle('active', btn.dataset.range === currentRange)); }
-        function updateRangeText(from, to, total) { const info = document.getElementById('rangeInfo'); const chartPeriod = document.getElementById('chartPeriod'); const text = `${formatDateTime(from)} sampai ${formatDateTime(to)} • ${Number(total || 0).toLocaleString('id-ID')} record`; if (info) info.textContent = text; if (chartPeriod) chartPeriod.textContent = text; }
-        function updateExportLink() { const link = document.getElementById('exportTraffic'); if (!link) return; const params = new URLSearchParams(); params.set('range', currentRange); if (currentRange === 'custom') { params.set('from', currentFrom); params.set('to', currentTo); } link.href = 'export.php?' + params.toString(); }
-        function setPreset(range) { currentRange = range; currentPage = 1; refreshTraffic(1); }
-        function setCustomRange(start, end) { currentRange = 'custom'; currentFrom = start + ' 00:00:00'; currentTo = end + ' 23:59:59'; currentPage = 1; refreshTraffic(1); }
-        function formatDateTime(value) { if (!value) return '-'; const d = new Date(String(value).replace(' ', 'T')); if (Number.isNaN(d.getTime())) return value; return d.toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
-        function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[c]); }
-        document.querySelectorAll('[data-range]').forEach(btn => btn.addEventListener('click', () => setPreset(btn.dataset.range)));
-        const perPage = document.getElementById('perPageSelect'); if (perPage) perPage.addEventListener('change', () => { currentPerPage = Number(perPage.value) || 25; currentPage = 1; refreshTraffic(1); });
-        const form = document.getElementById('historyFilterForm'); if (form) form.addEventListener('submit', event => { event.preventDefault(); const start = document.getElementById('historyStart')?.value; const end = document.getElementById('historyEnd')?.value; if (start && end) setCustomRange(start, end); });
+        function updateRangeButtons() { document.querySelectorAll('[data-range]').forEach(b => b.classList.toggle('active', b.dataset.range === currentRange)); }
+        function updateRangeText(from, to, total) { const text = `${formatDateTime(from)} sampai ${formatDateTime(to)} • ${Number(total || 0).toLocaleString('id-ID')} record`; const a = document.getElementById('rangeInfo'), c = document.getElementById('chartPeriod'); if (a) a.textContent = text; if (c) c.textContent = text; }
+        function updateExportLink() { const link = document.getElementById('exportTraffic'); if (!link) return; const p = new URLSearchParams({ range: currentRange }); if (currentRange === 'custom') { p.set('from', currentFrom); p.set('to', currentTo); } link.href = 'export.php?' + p.toString(); }
+        function formatDateTime(v) { if (!v) return '-'; const d = new Date(String(v).replace(' ', 'T')); return Number.isNaN(d.getTime()) ? v : d.toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+        function esc(v) { return String(v ?? '').replace(/[&<>'"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[c]); }
+        document.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', () => { currentRange = b.dataset.range; currentPage = 1; refreshTraffic(1); }));
+        const pp = document.getElementById('perPageSelect'); if (pp) pp.addEventListener('change', () => { currentPerPage = Number(pp.value) || 25; currentPage = 1; refreshTraffic(1); });
+        const form = document.getElementById('historyFilterForm'); if (form) form.addEventListener('submit', e => { e.preventDefault(); const s = document.getElementById('historyStart')?.value, t = document.getElementById('historyEnd')?.value; if (s && t) { currentRange = 'custom'; currentFrom = s + ' 00:00:00'; currentTo = t + ' 23:59:59'; currentPage = 1; refreshTraffic(1); } });
         createChart([], [], []); refreshTraffic(1);
         function schedule() { clearTimeout(timer); timer = setTimeout(async () => { await refreshTraffic(currentPage); schedule(); }, 10000); }
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refreshTraffic(currentPage); schedule(); } else clearTimeout(timer); });
-        updateRangeButtons(); schedule();
+        schedule();
     }
 
-    function initDashboardHistory() {
+    function initDashboardProV3() {
         if (!window.location.pathname.toLowerCase().includes('/dashboard/')) return;
-        if (typeof Chart === 'undefined' || !document.getElementById('trafficChart')) return;
-        let timer = null; let busy = false;
-        async function refreshDashboardHistory() {
-            if (busy || document.visibilityState !== 'visible') return; busy = true;
+        const canvas = document.getElementById('trafficChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const style = document.createElement('style');
+        style.id = 'dashboardProV3Style';
+        style.textContent = `
+            .dashboard-pro-v3{margin-top:1rem}.dashboard-pro-v3 .range-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.dashboard-pro-v3 .range-btn{border:1px solid var(--border-color,#dbe3ef);background:var(--card-bg,#fff);color:var(--text-color,#334155);border-radius:9px;padding:7px 12px;font-size:.78rem;font-weight:700;cursor:pointer}.dashboard-pro-v3 .range-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}.dashboard-pro-v3 .collector{margin-left:auto;font-size:.76rem;font-weight:700;padding:7px 11px;border-radius:999px;background:#f1f5f9;color:#475569}.dashboard-pro-v3 .collector.healthy{background:#dcfce7;color:#166534}.dashboard-pro-v3 .collector.delayed{background:#fef3c7;color:#92400e}.dashboard-pro-v3 .collector.offline{background:#fee2e2;color:#991b1b}.dashboard-pro-v3 .pro-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-top:14px}.dashboard-pro-v3 .pro-card{border:1px solid var(--border-color,#e5e7eb);border-radius:16px;padding:16px 18px;background:var(--card-bg,#fff);box-shadow:0 8px 24px rgba(15,23,42,.05)}.dashboard-pro-v3 .pro-label{font-size:.69rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#64748b;margin-bottom:7px}.dashboard-pro-v3 .pro-value{font-size:1.25rem;font-weight:800;line-height:1.15;color:#0f172a}.dashboard-pro-v3 .pro-meta{margin-top:6px;font-size:.7rem;color:#64748b}.dashboard-pro-v3 .current .pro-value{color:#2563eb}.dashboard-pro-v3 .avg .pro-value{color:#0f766e}.dashboard-pro-v3 .peak .pro-value{color:#dc2626}body.dark .dashboard-pro-v3 .pro-card{background:#111827;border-color:#253044;box-shadow:0 8px 24px rgba(0,0,0,.18)}body.dark .dashboard-pro-v3 .range-btn{background:#111827;border-color:#334155;color:#cbd5e1}body.dark .dashboard-pro-v3 .collector{background:#1e293b;color:#cbd5e1}
+            @media(max-width:1200px){.dashboard-pro-v3 .pro-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.dashboard-pro-v3 .pro-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-pro-v3 .collector{margin-left:0;width:100%}}
+        `;
+        document.head.appendChild(style);
+
+        const card = canvas.closest('.monitor-card') || canvas.parentElement;
+        const wrap = document.createElement('div');
+        wrap.id = 'dashboardProV3';
+        wrap.className = 'dashboard-pro-v3';
+        wrap.innerHTML = `
+            <div class="range-toolbar">
+                <button class="range-btn active" data-dashboard-range="10m">10 Menit</button>
+                <button class="range-btn" data-dashboard-range="1h">1 Jam</button>
+                <button class="range-btn" data-dashboard-range="6h">6 Jam</button>
+                <button class="range-btn" data-dashboard-range="24h">24 Jam</button>
+                <span class="collector" id="dashboardCollector"><i class="bi bi-activity"></i> Collector: Checking...</span>
+            </div>
+            <div class="pro-grid">
+                <div class="pro-card current"><div class="pro-label">Current Download</div><div class="pro-value" id="proCurrentDownload">0.00 Mbps</div><div class="pro-meta">Live ether1</div></div>
+                <div class="pro-card current"><div class="pro-label">Current Upload</div><div class="pro-value" id="proCurrentUpload">0.00 Mbps</div><div class="pro-meta">Live ether1</div></div>
+                <div class="pro-card avg"><div class="pro-label">Average Download</div><div class="pro-value" id="proAvgDownload">0.00 Mbps</div><div class="pro-meta" id="proAvgPeriod">Rolling 1 jam</div></div>
+                <div class="pro-card avg"><div class="pro-label">Average Upload</div><div class="pro-value" id="proAvgUpload">0.00 Mbps</div><div class="pro-meta" id="proAvgPeriod2">Rolling 1 jam</div></div>
+                <div class="pro-card peak"><div class="pro-label">Peak Download</div><div class="pro-value" id="proPeakDownload">0.00 Mbps</div><div class="pro-meta" id="proPeakPeriod">Periode aktif</div></div>
+                <div class="pro-card peak"><div class="pro-label">Peak Upload</div><div class="pro-value" id="proPeakUpload">0.00 Mbps</div><div class="pro-meta" id="proPeakPeriod2">Periode aktif</div></div>
+            </div>`;
+        card.insertAdjacentElement('afterend', wrap);
+
+        let range = '10m', timer = null, busy = false, chart = null;
+        const colors = { download: '#0d6efd', upload: '#20c997' };
+
+        // Reuse the dashboard's existing Chart instance when available.
+        try { if (typeof trafficChart !== 'undefined') chart = trafficChart; } catch (_) {}
+        if (!chart) {
+            chart = new Chart(canvas.getContext('2d'), { type:'line', data:{labels:[],datasets:[{label:'Download',data:[],borderColor:colors.download,backgroundColor:'rgba(13,110,253,.12)',fill:true,tension:.4,pointRadius:0},{label:'Upload',data:[],borderColor:colors.upload,backgroundColor:'rgba(32,201,151,.10)',fill:true,tension:.4,pointRadius:0}]}, options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false}} });
+        }
+
+        function setRange(next) { range = next; wrap.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('active', b.dataset.dashboardRange === range)); refresh(); }
+        function currentValues() {
+            const d = document.getElementById('download')?.textContent || '0';
+            const u = document.getElementById('upload')?.textContent || '0';
+            return { download: parseFloat(d.replace(',', '.')) || 0, upload: parseFloat(u.replace(',', '.')) || 0 };
+        }
+        async function refresh() {
+            if (busy || document.visibilityState !== 'visible') return;
+            busy = true;
             try {
-                const response = await fetch('../api/dashboard_history.php?nocache=' + Date.now(), { cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                if (!response.ok) throw new Error('HTTP ' + response.status); const result = await response.json(); if (!result.success) throw new Error(result.message || 'Dashboard history error');
-                if (typeof labels !== 'undefined' && typeof downloadData !== 'undefined' && typeof uploadData !== 'undefined') { labels.splice(0, labels.length, ...(result.labels || [])); downloadData.splice(0, downloadData.length, ...(result.downloads || [])); uploadData.splice(0, uploadData.length, ...(result.uploads || [])); }
-                if (typeof trafficChart !== 'undefined' && trafficChart) { trafficChart.data.labels = result.labels || []; trafficChart.data.datasets[0].data = result.downloads || []; trafficChart.data.datasets[1].data = result.uploads || []; trafficChart.update('none'); }
-                const peakDownloadElement = document.getElementById('peakDownload'); const peakUploadElement = document.getElementById('peakUpload');
-                if (peakDownloadElement) peakDownloadElement.textContent = Number(result.peak_download || 0).toFixed(2) + ' Mbps';
-                if (peakUploadElement) peakUploadElement.textContent = Number(result.peak_upload || 0).toFixed(2) + ' Mbps';
-            } catch (error) { console.warn('Dashboard history sync gagal:', error.message); } finally { busy = false; }
+                const r = await fetch('../api/dashboard_history.php?range=' + encodeURIComponent(range) + '&nocache=' + Date.now(), { cache:'no-store', headers:{'X-Requested-With':'XMLHttpRequest'} });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const result = await r.json(); if (!result.success) throw new Error(result.message || 'Dashboard history error');
+                chart.data.labels = result.labels || [];
+                chart.data.datasets[0].data = result.downloads || [];
+                chart.data.datasets[1].data = result.uploads || [];
+                chart.update('none');
+                const live = currentValues();
+                document.getElementById('proCurrentDownload').textContent = live.download.toFixed(2) + ' Mbps';
+                document.getElementById('proCurrentUpload').textContent = live.upload.toFixed(2) + ' Mbps';
+                document.getElementById('proAvgDownload').textContent = Number(result.avg_download || 0).toFixed(2) + ' Mbps';
+                document.getElementById('proAvgUpload').textContent = Number(result.avg_upload || 0).toFixed(2) + ' Mbps';
+                document.getElementById('proPeakDownload').textContent = Number(result.peak_download || 0).toFixed(2) + ' Mbps';
+                document.getElementById('proPeakUpload').textContent = Number(result.peak_upload || 0).toFixed(2) + ' Mbps';
+                const labels = { '10m':'10 menit', '1h':'1 jam', '6h':'6 jam', '24h':'24 jam' };
+                document.getElementById('proAvgPeriod').textContent = 'Rata-rata ' + labels[range];
+                document.getElementById('proAvgPeriod2').textContent = 'Rata-rata ' + labels[range];
+                document.getElementById('proPeakPeriod').textContent = 'Maksimum ' + labels[range];
+                document.getElementById('proPeakPeriod2').textContent = 'Maksimum ' + labels[range];
+                const c = document.getElementById('dashboardCollector');
+                const status = String(result.collector_status || 'OFFLINE').toLowerCase();
+                c.className = 'collector ' + status;
+                const age = result.collector_age === null || result.collector_age === undefined ? '-' : result.collector_age + ' dtk lalu';
+                c.innerHTML = '<i class="bi bi-activity"></i> Collector: ' + String(result.collector_status || 'OFFLINE') + ' • ' + age;
+            } catch (e) { console.warn('Dashboard PRO v3 refresh gagal:', e.message); }
+            finally { busy = false; }
         }
-        function schedule() { clearTimeout(timer); timer = setTimeout(async () => { await refreshDashboardHistory(); schedule(); }, 10000); }
-        setTimeout(() => { refreshDashboardHistory(); schedule(); }, 500);
-        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refreshDashboardHistory(); schedule(); } else clearTimeout(timer); });
-    }
-
-    function initDashboardProV2() {
-        if (!window.location.pathname.toLowerCase().includes('/dashboard/')) return;
-        if (document.getElementById('dashboardProV2')) return;
-        const chart = document.getElementById('trafficChart'); if (!chart) return;
-
-        const style = document.createElement('style'); style.id = 'dashboardProV2Style'; style.textContent = `
-            .dashboard-pro-v2{margin-top:1rem;margin-bottom:.25rem}
-            .dashboard-pro-v2 .pro-card{height:100%;border:1px solid var(--border-color,#e5e7eb);border-radius:16px;padding:18px 20px;background:var(--card-bg,#fff);box-shadow:0 8px 24px rgba(15,23,42,.05);transition:.2s ease}
-            .dashboard-pro-v2 .pro-card:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(15,23,42,.08)}
-            .dashboard-pro-v2 .pro-label{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#64748b;margin-bottom:7px}
-            .dashboard-pro-v2 .pro-value{font-size:1.38rem;font-weight:750;line-height:1.15;color:#0f172a}
-            .dashboard-pro-v2 .pro-value small{font-size:.72rem;font-weight:600;color:#64748b}
-            .dashboard-pro-v2 .pro-meta{margin-top:7px;font-size:.72rem;color:#64748b}
-            .dashboard-pro-v2 .pro-icon{float:right;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:#f1f5f9;color:#2563eb;font-size:1rem}
-            .dashboard-pro-v2 .pro-card.current .pro-value{color:#2563eb}.dashboard-pro-v2 .pro-card.avg .pro-value{color:#0f766e}.dashboard-pro-v2 .pro-card.peak .pro-value{color:#dc2626}
-            body.dark .dashboard-pro-v2 .pro-card{background:#111827;border-color:#253044;box-shadow:0 8px 24px rgba(0,0,0,.18)}
-            body.dark .dashboard-pro-v2 .pro-value{color:#f8fafc}body.dark .dashboard-pro-v2 .pro-label,body.dark .dashboard-pro-v2 .pro-meta{color:#94a3b8}body.dark .dashboard-pro-v2 .pro-icon{background:#1e293b;color:#60a5fa}
-            body.dark .dashboard-pro-v2 .pro-card.current .pro-value{color:#60a5fa}body.dark .dashboard-pro-v2 .pro-card.avg .pro-value{color:#5eead4}body.dark .dashboard-pro-v2 .pro-card.peak .pro-value{color:#f87171}
-        `; document.head.appendChild(style);
-
-        const wrapper = document.createElement('div'); wrapper.id = 'dashboardProV2'; wrapper.className = 'row g-3 dashboard-pro-v2';
-        wrapper.innerHTML = `
-            <div class="col-xl-2 col-md-4 col-6"><div class="pro-card current"><span class="pro-icon"><i class="bi bi-lightning-charge"></i></span><div class="pro-label">Current Download</div><div class="pro-value" id="proCurrentDownload">0.00 <small>Mbps</small></div><div class="pro-meta">Live dari MikroTik</div></div></div>
-            <div class="col-xl-2 col-md-4 col-6"><div class="pro-card current"><span class="pro-icon"><i class="bi bi-arrow-up-right"></i></span><div class="pro-label">Current Upload</div><div class="pro-value" id="proCurrentUpload">0.00 <small>Mbps</small></div><div class="pro-meta">Live dari MikroTik</div></div></div>
-            <div class="col-xl-2 col-md-4 col-6"><div class="pro-card avg"><span class="pro-icon"><i class="bi bi-graph-up"></i></span><div class="pro-label">Average Download</div><div class="pro-value" id="proAvgDownload">0.00 <small>Mbps</small></div><div class="pro-meta">Rolling 1 jam</div></div></div>
-            <div class="col-xl-2 col-md-4 col-6"><div class="pro-card avg"><span class="pro-icon"><i class="bi bi-graph-up-arrow"></i></span><div class="pro-label">Average Upload</div><div class="pro-value" id="proAvgUpload">0.00 <small>Mbps</small></div><div class="pro-meta">Rolling 1 jam</div></div></div>
-            <div class="col-xl-2 col-md-4 col-6"><div class="pro-card peak"><span class="pro-icon"><i class="bi bi-speedometer2"></i></span><div class="pro-label">Peak Download</div><div class="pro-value" id="proPeakDownload">0.00 <small>Mbps</small></div><div class="pro-meta">Maksimum 1 jam</div></div></div>
-            <div class="col-xl-2 col-md-4 col-6"><div class="pro-card peak"><span class="pro-icon"><i class="bi bi-speedometer"></i></span><div class="pro-label">Peak Upload</div><div class="pro-value" id="proPeakUpload">0.00 <small>Mbps</small></div><div class="pro-meta">Maksimum 1 jam</div></div></div>`;
-        const chartCard = chart.closest('.chart-card'); if (chartCard) chartCard.insertAdjacentElement('afterend', wrapper); else chart.parentElement.insertAdjacentElement('afterend', wrapper);
-
-        const currentDownload = document.getElementById('download'); const currentUpload = document.getElementById('upload');
-        function copyCurrentValues() {
-            if (currentDownload) { const value = parseFloat(currentDownload.textContent) || 0; document.getElementById('proCurrentDownload').innerHTML = value.toFixed(2) + ' <small>Mbps</small>'; }
-            if (currentUpload) { const value = parseFloat(currentUpload.textContent) || 0; document.getElementById('proCurrentUpload').innerHTML = value.toFixed(2) + ' <small>Mbps</small>'; }
-        }
-        async function refreshProStats() {
-            try {
-                const response = await fetch('../api/dashboard_history.php?nocache=' + Date.now(), { cache:'no-store' }); if (!response.ok) throw new Error('HTTP ' + response.status); const data = await response.json(); if (!data.success) return;
-                document.getElementById('proAvgDownload').innerHTML = Number(data.avg_download || 0).toFixed(2) + ' <small>Mbps</small>';
-                document.getElementById('proAvgUpload').innerHTML = Number(data.avg_upload || 0).toFixed(2) + ' <small>Mbps</small>';
-                document.getElementById('proPeakDownload').innerHTML = Number(data.peak_download || 0).toFixed(2) + ' <small>Mbps</small>';
-                document.getElementById('proPeakUpload').innerHTML = Number(data.peak_upload || 0).toFixed(2) + ' <small>Mbps</small>';
-                copyCurrentValues();
-            } catch (error) { console.warn('Dashboard PRO v2 sync gagal:', error.message); }
-        }
-        copyCurrentValues(); refreshProStats();
-        setInterval(() => { if (document.visibilityState === 'visible') { copyCurrentValues(); refreshProStats(); } }, 10000);
+        wrap.querySelectorAll('.range-btn').forEach(b => b.addEventListener('click', () => setRange(b.dataset.dashboardRange)));
+        refresh();
+        function schedule() { clearTimeout(timer); timer = setTimeout(async () => { await refresh(); schedule(); }, 10000); }
+        schedule();
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); schedule(); } else clearTimeout(timer); });
     }
 })();
