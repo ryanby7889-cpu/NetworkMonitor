@@ -4,19 +4,38 @@ require_once __DIR__ . '/../library/routeros_api.class.php';
 ini_set('display_errors','0');
 header('Content-Type: application/json; charset=utf-8');
 function pppoe_json($ok,$msg='',$data=[],$code=200){http_response_code($code);echo json_encode(array_merge(['success'=>$ok,'message'=>$msg],$data),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;}
-function numv($v){return is_numeric($v)?(float)$v:0.0;}
+
+/* RouterOS can return counters as plain bytes (123456), paired values (tx/rx),
+ * or formatted values such as 1.2MiB depending on command/version. */
+function numv($v){
+    if(is_int($v)||is_float($v)) return (float)$v;
+    if(is_array($v)) return numv($v[0]??0);
+    $s=trim((string)$v);
+    if($s==='') return 0.0;
+    if(is_numeric($s)) return (float)$s;
+    if(preg_match('/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*([kmgtpe]?i?b|[kmgtpe])$/i',$s,$m)){
+        $n=(float)$m[1];
+        $u=strtolower($m[2]);
+        $binary=(strpos($u,'i')!==false);
+        $base=$binary?1024:1000;
+        $unit=rtrim($u,'b');
+        $powers=['k'=>1,'m'=>2,'g'=>3,'t'=>4,'p'=>5,'e'=>6];
+        return $n*($powers[$unit]??0 ? pow($base,$powers[$unit]) : 1);
+    }
+    return 0.0;
+}
 function pairv($v){
-    if(is_array($v)) return [numv($v[0]??0),numv($v[1]??0)];
+    if(is_array($v)){
+        if(array_key_exists(0,$v)||array_key_exists(1,$v)) return [numv($v[0]??0),numv($v[1]??0)];
+        $vals=array_values($v); return [numv($vals[0]??0),numv($vals[1]??0)];
+    }
     $v=trim((string)$v);
     if($v==='') return [0.0,0.0];
-    $parts=preg_split('/[\\/]/',$v);
+    $parts=preg_split('/\s*\/\s*/',$v,2);
     return [numv($parts[0]??0),numv($parts[1]??0)];
 }
 function firstv($r,$keys,$default=0){foreach($keys as $k){if(isset($r[$k])&&$r[$k]!==''&&$r[$k]!==null)return $r[$k];}return $default;}
 function active_print($api){
-    // Do NOT send the CLI "stats" modifier here. Some RouterOS versions
-    // reject it through the legacy PHP API and can return an incomplete/trap response.
-    // The current PPP active record exposes bytes/packets as paired values.
     return (array)$api->comm('/ppp/active/print',[
         '.proplist'=>'.id,name,address,caller-id,uptime,service,session-id,bytes,packets,bytes-in,bytes-out,packets-in,packets-out'
     ]);
@@ -46,7 +65,7 @@ try{
         if(!is_array($r)) continue;
         $name=(string)($r['name']??'-');
 
-        // RouterOS reports PPP active traffic as bytes="tx/rx" and packets="tx/rx".
+        // PPP active bytes are normally tx/rx. Prefer explicit byte fields when present.
         [$txPair,$rxPair]=pairv($r['bytes']??'');
         $rx=numv(firstv($r,['bytes-in','rx-byte','rx_bytes'],0));
         $tx=numv(firstv($r,['bytes-out','tx-byte','tx_bytes'],0));
