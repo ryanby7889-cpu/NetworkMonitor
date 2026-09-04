@@ -1,7 +1,7 @@
 -- ======================================================
 -- DATABASE : NETWORK MONITOR
 -- Author   : Ryan & ChatGPT
--- Version  : 1.0
+-- Version  : 1.1
 -- ======================================================
 
 DROP DATABASE IF EXISTS network_monitor;
@@ -10,10 +10,6 @@ CHARACTER SET utf8mb4
 COLLATE utf8mb4_general_ci;
 
 USE network_monitor;
-
--- ======================================================
--- TABLE : USERS
--- ======================================================
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -25,13 +21,7 @@ CREATE TABLE users (
 );
 
 INSERT INTO users(fullname,username,password)
-VALUES
-('Administrator','admin','admin123');
-
-
--- ======================================================
--- TABLE : ROUTER
--- ======================================================
+VALUES ('Administrator','admin','admin123');
 
 CREATE TABLE router (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -46,115 +36,75 @@ CREATE TABLE router (
 
 INSERT INTO router
 (router_name,ip_address,username,password)
-VALUES
-(
-'MikroTik Utama',
-'192.168.88.1',
-'monitor',
-'monitor123'
-);
-
--- ======================================================
--- TABLE : INTERFACE
--- ======================================================
+VALUES ('MikroTik Utama','192.168.88.1','monitor','monitor123');
 
 CREATE TABLE interfaces (
-
     id INT AUTO_INCREMENT PRIMARY KEY,
-
     router_id INT NOT NULL,
-
     interface_name VARCHAR(50),
-
     interface_type VARCHAR(30),
-
     enabled BOOLEAN DEFAULT TRUE,
-
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY(router_id)
-    REFERENCES router(id)
-    ON DELETE CASCADE
-
+    FOREIGN KEY(router_id) REFERENCES router(id) ON DELETE CASCADE
 );
 
 INSERT INTO interfaces
 (router_id,interface_name,interface_type)
-
-VALUES
-
-(1,'ether1','WAN');
-
--- ======================================================
--- TABLE : TRAFFIC LOG
--- ======================================================
+VALUES (1,'ether1','WAN');
 
 CREATE TABLE traffic_log (
-
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-
     router_id INT,
-
     interface_id INT,
-
     rx_bps BIGINT,
-
     tx_bps BIGINT,
-
     rx_mbps DECIMAL(10,2),
-
     tx_mbps DECIMAL(10,2),
-
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
     INDEX(created_at),
-
-    FOREIGN KEY(router_id)
-    REFERENCES router(id),
-
-    FOREIGN KEY(interface_id)
-    REFERENCES interfaces(id)
-
+    FOREIGN KEY(router_id) REFERENCES router(id),
+    FOREIGN KEY(interface_id) REFERENCES interfaces(id)
 );
 
 -- ======================================================
--- TABLE : SETTINGS
+-- TABLE : TRAFFIC HISTORY
+-- Used by collector, Traffic History page and CSV export.
 -- ======================================================
 
+CREATE TABLE traffic_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    router_id INT,
+    interface_name VARCHAR(50) NOT NULL,
+    download_mbps DECIMAL(10,2) DEFAULT 0,
+    upload_mbps DECIMAL(10,2) DEFAULT 0,
+    rx_packet BIGINT DEFAULT 0,
+    tx_packet BIGINT DEFAULT 0,
+    cpu DECIMAL(6,2) DEFAULT 0,
+    memory DECIMAL(6,2) DEFAULT 0,
+    disk DECIMAL(6,2) DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_traffic_history_created_at (created_at),
+    INDEX idx_traffic_history_router (router_id),
+    FOREIGN KEY(router_id) REFERENCES router(id) ON DELETE SET NULL
+);
+
 CREATE TABLE settings (
-
     id INT AUTO_INCREMENT PRIMARY KEY,
-
     setting_name VARCHAR(100),
-
     setting_value VARCHAR(255)
-
 );
 
 INSERT INTO settings(setting_name,setting_value)
 VALUES
-
 ('company_name','Network Monitor'),
-
 ('refresh_interval','1000'),
-
 ('timezone','Asia/Jakarta');
 
--- ======================================================
--- TABLE : SYSTEM LOG
--- ======================================================
-
 CREATE TABLE system_log (
-
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-
     activity VARCHAR(255),
-
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
 );
 
 INSERT INTO system_log(activity)
-VALUES
-
-('Database berhasil dibuat.');
+VALUES ('Database berhasil dibuat.');
