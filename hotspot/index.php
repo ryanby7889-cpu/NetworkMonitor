@@ -15,15 +15,17 @@ $activeMenu = 'hotspot';
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
-<?php
-require_once __DIR__ . '/../includes/sidebar.php';
-?>
+<?php require_once __DIR__ . '/../includes/sidebar.php'; ?>
 
 <main class="main-content hotspot-page">
   <header class="hotspot-header">
     <div>
       <h1>Hotspot MikroTik</h1>
       <p>Manajemen user, profile, dan active session Hotspot secara live.</p>
+      <div class="hs-connection-wrap">
+        <span id="mikrotikConnectionStatus" class="hs-connection checking">Memeriksa koneksi...</span>
+        <small id="lastRefreshTime">Update: -</small>
+      </div>
     </div>
     <button class="hs-btn hs-primary" id="refreshBtn"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
   </header>
@@ -32,7 +34,8 @@ require_once __DIR__ . '/../includes/sidebar.php';
 
   <section class="hs-stats">
     <div class="hs-stat"><span>Total User</span><strong id="usersTotal">0</strong></div>
-    <div class="hs-stat"><span>User Enabled</span><strong id="usersEnabled">0</strong></div><div class="hs-stat"><span>User Online</span><strong id="usersOnline">0</strong></div>
+    <div class="hs-stat"><span>User Enabled</span><strong id="usersEnabled">0</strong></div>
+    <div class="hs-stat"><span>User Online</span><strong id="usersOnline">0</strong></div>
     <div class="hs-stat"><span>Profile</span><strong id="profilesTotal">0</strong></div>
     <div class="hs-stat"><span>Active Session</span><strong id="activeTotal">0</strong></div>
   </section>
@@ -52,6 +55,11 @@ require_once __DIR__ . '/../includes/sidebar.php';
   </section>
 
   <section class="hs-card">
+    <div class="hs-card-head"><div><h2>Pelanggan Hotspot</h2><small>Hubungan user Hotspot dengan pelanggan Billing</small></div><input id="hotspotCustomerSearch" placeholder="Cari username / nama / paket..."></div>
+    <div class="hs-table-wrap"><table><thead><tr><th>#</th><th>Username Hotspot</th><th>Pelanggan</th><th>Paket</th><th>Billing</th><th>Live</th><th>Action</th></tr></thead><tbody id="hotspotCustomerTable"><tr><td colspan="7">Memuat...</td></tr></tbody></table></div>
+  </section>
+
+  <section class="hs-card">
     <div class="hs-card-head"><div><h2>Active Session</h2><small>Client Hotspot yang sedang online</small></div><input id="activeSearch" placeholder="Cari user / IP / MAC..."></div>
     <div class="hs-table-wrap"><table><thead><tr><th>#</th><th>User</th><th>IP</th><th>MAC</th><th>Login By</th><th>Uptime</th><th>Traffic</th><th>Action</th></tr></thead><tbody id="activeTable"><tr><td colspan="8">Memuat...</td></tr></tbody></table></div>
   </section>
@@ -62,7 +70,7 @@ require_once __DIR__ . '/../includes/sidebar.php';
   </section>
 </main>
 
-<div class="hs-modal" id="userModal" hidden style="display:none!important;"><div class="hs-modal-box"><div class="hs-modal-head"><h2 id="modalTitle">Tambah User Hotspot</h2><button type="button" id="closeModal">×</button></div><form id="userForm"><input type="hidden" name="id"><div class="hs-form-grid"><label>Username<input name="name" maxlength="64" required></label><label>Password<input name="password" type="password" maxlength="128"></label><label>Profile<select name="profile" id="profileSelect"></select></label><label>Server<input name="server" placeholder="all"></label><label>Limit Uptime<input name="limit_uptime" placeholder="Contoh: 1h"></label><label>Limit Bytes In<input name="limit_bytes_in" placeholder="Contoh: 1G"></label><label>Limit Bytes Out<input name="limit_bytes_out" placeholder="Contoh: 1G"></label></div><div id="formMessage" class="hs-message" hidden></div><div class="hs-modal-actions"><button type="button" class="hs-btn" id="cancelBtn">Batal</button><button class="hs-btn hs-primary" type="submit">Simpan</button></div></form></div></div>
+<div class="hs-modal" id="userModal" hidden style="display:none!important;"><div class="hs-modal-box"><div class="hs-modal-head"><h2 id="modalTitle">Tambah User Hotspot</h2><button type="button" id="closeModal">×</button></div><form id="userForm"><input type="hidden" name="id"><div class="hs-form-grid"><label>Username<input name="name" maxlength="64" required></label><label>Password<input name="password" type="password" maxlength="128"></label><label>Profile<select name="profile" id="profileSelect"></select></label><label>Server<input name="server" placeholder="all"></label><label>Limit Uptime<input name="limit_uptime" placeholder="Contoh: 1h"></label><label>Limit Bytes In<input name="limit_bytes_in" placeholder="Contoh: 1G"></label><label>Limit Bytes Out<input name="limit_bytes_out" placeholder="Contoh: 1G"></label><label>Comment<input name="comment" maxlength="255"></label></div><div id="formMessage" class="hs-message" hidden></div><div class="hs-modal-actions"><button type="button" class="hs-btn" id="cancelBtn">Batal</button><button class="hs-btn hs-primary" type="submit">Simpan</button></div></form></div></div>
 
 <div class="hs-modal" id="billingLinkModal" hidden style="display:none!important;"><div class="hs-modal-box"><div class="hs-modal-head"><div><h2>Hubungkan ke Pelanggan</h2><small id="linkHotspotName">-</small></div><button type="button" id="closeBillingLinkModal">×</button></div><form id="billingLinkForm"><label>Pelanggan Billing<select id="billingCustomerSelect" name="customer_id" required><option value="">Memuat...</option></select></label><div id="billingLinkMessage" class="hs-message" hidden></div><div class="hs-modal-actions"><button type="button" class="hs-btn" id="cancelBillingLinkBtn">Batal</button><button type="submit" class="hs-btn hs-primary" id="saveBillingLinkBtn">Simpan Hubungan</button></div></form></div></div>
 
