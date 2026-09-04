@@ -31,14 +31,16 @@ $from = date('Y-m-d H:i:s', time() - $seconds);
 .history-range:hover{border-color:#2563eb;color:#2563eb}
 .history-range.active{background:#2563eb;color:#fff;border-color:#2563eb}
 .history-meta{font-size:12px;color:#64748b}
+.history-live{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dbe2ea;border-radius:9px;background:#fff;color:#475569;font-size:12px;font-weight:600;white-space:nowrap}
+.history-live-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.12)}
 .pagination-wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
 .pagination-buttons{display:flex;gap:6px;align-items:center}
 .page-btn{min-width:36px;height:34px;border:1px solid #dbe2ea;background:#fff;border-radius:8px;color:#475569;font-weight:600;cursor:pointer}
 .page-btn:hover:not(:disabled){border-color:#2563eb;color:#2563eb}
 .page-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
 .page-btn:disabled{opacity:.45;cursor:not-allowed}
-@media (max-width:768px){.history-toolbar{width:100%}.history-range{flex:1}.pagination-wrap{align-items:flex-start;flex-direction:column}}
-body.dark .history-range,body.dark .page-btn{background:#111827;color:#cbd5e1;border-color:#334155}
+@media (max-width:768px){.history-toolbar{width:100%}.history-range{flex:1}.pagination-wrap{align-items:flex-start;flex-direction:column}.history-live{order:-1}}
+body.dark .history-range,body.dark .page-btn,body.dark .history-live{background:#111827;color:#cbd5e1;border-color:#334155}
 body.dark .history-range.active,body.dark .page-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
 </style>
 </head>
@@ -54,11 +56,14 @@ require_once "../includes/sidebar.php";
             <div class="page-title">Traffic History</div>
             <div class="subtitle">Historical MikroTik Ether1 traffic monitoring</div>
         </div>
-        <div class="history-toolbar" id="rangeToolbar">
-            <button type="button" class="history-range" data-range="1h">1 Jam</button>
-            <button type="button" class="history-range" data-range="6h">6 Jam</button>
-            <button type="button" class="history-range" data-range="24h">24 Jam</button>
-            <button type="button" class="history-range" data-range="7d">7 Hari</button>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="history-live" id="historyLiveStatus"><span class="history-live-dot"></span><span>Live • updating 10s</span></span>
+            <div class="history-toolbar" id="rangeToolbar">
+                <button type="button" class="history-range" data-range="1h">1 Jam</button>
+                <button type="button" class="history-range" data-range="6h">6 Jam</button>
+                <button type="button" class="history-range" data-range="24h">24 Jam</button>
+                <button type="button" class="history-range" data-range="7d">7 Hari</button>
+            </div>
         </div>
     </div>
 
@@ -134,6 +139,6 @@ window.TRAFFIC_HISTORY_CONFIG = {
     perPage: 25
 };
 </script>
-<script src="../assets/js/app.js?v=3"></script>
+<script src="../assets/js/app.js?v=4"></script>
 </body>
 </html>
