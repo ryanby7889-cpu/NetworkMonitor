@@ -3,60 +3,53 @@
    Compact, professional and responsive layout
 ========================================================= */
 
-/* Keep PPPoE content aligned with the global sidebar */
+/* Global shell fallback: PPPoE must never lose the sidebar */
+.sidebar {
+    display: block !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: var(--sidebar-open, 220px) !important;
+    z-index: 1000 !important;
+}
+.sidebar.collapsed { width: var(--sidebar-closed, 70px) !important; }
+
 .pppoe-page {
     margin-left: var(--sidebar-open, 220px) !important;
     width: auto !important;
     max-width: none !important;
+    min-width: 0 !important;
     min-height: 100vh;
     padding: 28px 30px 42px !important;
     overflow-x: hidden;
 }
-.sidebar.collapsed ~ .pppoe-page {
-    margin-left: var(--sidebar-closed, 70px) !important;
-}
+.sidebar.collapsed ~ .pppoe-page { margin-left: var(--sidebar-closed, 70px) !important; }
 
-/* Header */
 .pppoe-page-header {
     max-width: 1400px;
-    margin: 0 auto 18px;
-    padding: 0;
+    margin: 0 auto 18px !important;
+    padding: 0 !important;
 }
-.pppoe-page-header .page-title {
-    font-size: 26px;
-    letter-spacing: -.4px;
-}
-.pppoe-page-header .page-subtitle {
-    font-size: 12px;
-}
+.pppoe-page-header .page-title { font-size: 26px; letter-spacing: -.4px; }
+.pppoe-page-header .page-subtitle { font-size: 12px; }
 .pppoe-actions { gap: 8px; }
 
-/* PRO overview */
-#pppoePro {
-    max-width: 1400px;
-    margin: 0 auto 18px !important;
-}
-#pppoePro .ppp-pro-toolbar {
-    margin-bottom: 10px !important;
-    min-height: 36px;
-}
-#pppoePro .ppp-pro-title {
-    font-size: 13px !important;
-    line-height: 1.25;
-}
-#pppoePro .ppp-pro-sub {
-    font-size: 10px !important;
-}
+/* Live overview */
+#pppoePro { max-width: 1400px; margin: 0 auto 18px !important; }
+#pppoePro .ppp-pro-toolbar { margin-bottom: 10px !important; min-height: 36px; }
+#pppoePro .ppp-pro-title { font-size: 13px !important; line-height: 1.25; }
+#pppoePro .ppp-pro-sub { font-size: 10px !important; }
 #pppoePro .ppp-pro-actions { gap: 5px !important; }
 #pppoePro .ppp-pro-btn {
-    min-height: 29px;
+    min-height: 29px !important;
     padding: 5px 10px !important;
     border-radius: 7px !important;
     font-size: 10px !important;
 }
 #pppoePro .ppp-pro-grid {
     display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(4, minmax(0,1fr)) !important;
     gap: 10px !important;
 }
 #pppoePro .ppp-pro-card {
@@ -65,28 +58,15 @@
     border-radius: 11px !important;
     box-shadow: 0 2px 8px rgba(15,23,42,.045) !important;
 }
-#pppoePro .ppp-pro-label {
-    font-size: 9px !important;
-    letter-spacing: .055em;
-}
-#pppoePro .ppp-pro-value {
-    margin-top: 4px !important;
-    font-size: 21px !important;
-    letter-spacing: -.3px;
-}
-#pppoePro .ppp-pro-meta {
-    margin-top: 3px !important;
-    font-size: 9px !important;
-}
+#pppoePro .ppp-pro-label { font-size: 9px !important; letter-spacing: .055em; }
+#pppoePro .ppp-pro-value { margin-top: 4px !important; font-size: 21px !important; }
+#pppoePro .ppp-pro-meta { margin-top: 3px !important; font-size: 9px !important; }
 #pppoePro .ppp-pro-panel {
     margin-top: 10px !important;
     padding: 12px 15px !important;
     border-radius: 11px !important;
 }
-#pppoePro .ppp-pro-panel-title {
-    margin-bottom: 8px !important;
-    font-size: 11px !important;
-}
+#pppoePro .ppp-pro-panel-title { margin-bottom: 8px !important; font-size: 11px !important; }
 #pppoePro .ppp-pro-bars { gap: 6px !important; }
 #pppoePro .ppp-pro-bar-row {
     grid-template-columns: 105px minmax(80px,1fr) 35px !important;
@@ -95,68 +75,44 @@
 }
 #pppoePro .ppp-pro-bar { height: 6px !important; }
 
-/* Existing management cards */
+/* Existing cards/tables */
 .pppoe-page > .pppoe-stats {
     max-width: 1400px;
-    margin: 0 auto 14px;
+    margin: 0 auto 14px !important;
     gap: 10px;
 }
-.pppoe-page > .pppoe-stats .pppoe-stat {
-    min-height: 78px;
-    padding: 13px 15px;
-    border-radius: 11px;
-}
-.pppoe-page > .pppoe-stats .pppoe-stat-icon {
-    width: 36px;
-    height: 36px;
-    flex-basis: 36px;
-    font-size: 15px;
-}
-.pppoe-page > .pppoe-stats .pppoe-stat-value { font-size: 21px; }
-.pppoe-page > .pppoe-stats .pppoe-stat-label { font-size: 10px; }
+.pppoe-page > .pppoe-stats .pppoe-stat { min-height: 78px; padding: 13px 15px; border-radius: 11px; }
+.pppoe-page > .pppoe-stats .pppoe-stat-icon { width:36px; height:36px; flex-basis:36px; font-size:15px; }
+.pppoe-page > .pppoe-stats .pppoe-stat-value { font-size:21px; }
+.pppoe-page > .pppoe-stats .pppoe-stat-label { font-size:10px; }
+.pppoe-card { max-width: 1400px; margin: 0 auto 14px !important; border-radius:11px !important; }
+.pppoe-card-header { padding:13px 16px !important; gap:12px; }
+.pppoe-card-heading h2 { font-size:14px !important; }
+.pppoe-card-heading small { margin-top:3px; font-size:10px; }
+.pppoe-card-tools { gap:7px; }
+.pppoe-search { min-height:34px; width:min(260px,100%); font-size:11px; }
+.pppoe-table { min-width:760px; }
+.pppoe-table th { padding:9px 11px !important; font-size:9px !important; }
+.pppoe-table td { padding:9px 11px !important; font-size:11px !important; }
+.pppoe-table .btn-small { padding:5px 7px; font-size:10px; }
 
-.pppoe-card {
-    max-width: 1400px;
-    margin: 0 auto 14px !important;
-    border-radius: 11px !important;
+@media (max-width:1100px) {
+    #pppoePro .ppp-pro-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
 }
-.pppoe-card-header {
-    padding: 13px 16px !important;
-    gap: 12px;
+@media (max-width:992px) {
+    .pppoe-page { margin-left:var(--sidebar-closed,70px) !important; padding:22px 20px 34px !important; }
 }
-.pppoe-card-heading h2 { font-size: 14px !important; }
-.pppoe-card-heading small { margin-top: 3px; font-size: 10px; }
-.pppoe-card-tools { gap: 7px; }
-.pppoe-search { min-height: 34px; width: min(260px,100%); font-size: 11px; }
-.pppoe-table { min-width: 760px; }
-.pppoe-table th { padding: 9px 11px !important; font-size: 9px !important; }
-.pppoe-table td { padding: 9px 11px !important; font-size: 11px !important; }
-.pppoe-table .btn-small { padding: 5px 7px; font-size: 10px; }
-
-/* Make the page look intentional at normal desktop widths */
-@media (max-width: 1100px) {
-    #pppoePro .ppp-pro-grid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
-}
-@media (max-width: 992px) {
-    .pppoe-page {
-        margin-left: var(--sidebar-closed, 70px) !important;
-        padding: 22px 20px 34px !important;
-    }
-}
-@media (max-width: 700px) {
-    .pppoe-page {
-        margin-left: 0 !important;
-        padding: 18px 14px 28px !important;
-    }
-    .pppoe-page-header { margin-bottom: 15px; }
-    .pppoe-page-header .page-title { font-size: 22px; }
-    #pppoePro .ppp-pro-grid { grid-template-columns: 1fr !important; }
-    #pppoePro .ppp-pro-toolbar { align-items: flex-start; }
-    .pppoe-search { width: 100%; }
+@media (max-width:700px) {
+    .sidebar { display:none !important; }
+    .pppoe-page { margin-left:0 !important; padding:18px 14px 28px !important; }
+    .pppoe-page-header { margin-bottom:15px !important; }
+    .pppoe-page-header .page-title { font-size:22px; }
+    #pppoePro .ppp-pro-grid { grid-template-columns:1fr !important; }
+    #pppoePro .ppp-pro-toolbar { align-items:flex-start; }
+    .pppoe-search { width:100%; }
 }
 
-/* Dark mode */
 html.theme-dark #pppoePro .ppp-pro-card,
 html.theme-dark #pppoePro .ppp-pro-panel,
 body.dark #pppoePro .ppp-pro-card,
-body.dark #pppoePro .ppp-pro-panel { box-shadow: 0 2px 8px rgba(0,0,0,.14) !important; }
+body.dark #pppoePro .ppp-pro-panel { box-shadow:0 2px 8px rgba(0,0,0,.14) !important; }
