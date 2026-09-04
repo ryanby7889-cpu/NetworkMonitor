@@ -5,7 +5,14 @@ require_once __DIR__ . '/../library/routeros_api.class.php';
 
 try {
     $pdo = (new Database())->connect();
-    $router = $pdo->query("SELECT * FROM router ORDER BY id ASC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    $routerId = (int)($_GET['router_id'] ?? $_POST['router_id'] ?? 0);
+    if ($routerId > 0) {
+        $stmt = $pdo->prepare('SELECT * FROM router WHERE id=? LIMIT 1');
+        $stmt->execute([$routerId]);
+        $router = $stmt->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $router = $pdo->query('SELECT * FROM router ORDER BY id ASC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+    }
     if (!$router) throw new RuntimeException('Konfigurasi router belum tersedia.');
 
     $api = new RouterosAPI();
@@ -16,11 +23,11 @@ try {
         $identity = $api->read();
         $api->disconnect();
         $pdo->prepare("UPDATE router SET status='ONLINE' WHERE id=?")->execute([$router['id']]);
-        echo json_encode(['success'=>true,'status'=>'ONLINE','identity'=>$identity[0]['name'] ?? $router['router_name']]);
+        echo json_encode(['success'=>true,'status'=>'ONLINE','router_id'=>(int)$router['id'],'router_name'=>$router['router_name'],'identity'=>$identity[0]['name'] ?? $router['router_name']]);
     } else {
         $pdo->prepare("UPDATE router SET status='OFFLINE' WHERE id=?")->execute([$router['id']]);
-        echo json_encode(['success'=>false,'status'=>'OFFLINE','message'=>'Router tidak dapat terhubung.']);
+        echo json_encode(['success'=>false,'status'=>'OFFLINE','router_id'=>(int)$router['id'],'router_name'=>$router['router_name'],'message'=>'Router tidak dapat terhubung.']);
     }
 } catch (Throwable $e) {
-    echo json_encode(['success'=>false,'status'=>'ERROR','message'=>$e->getMessage()]);
+    echo json_encode(['success'=>false,'status'=>'ERROR','router_id'=>(int)($routerId ?? 0),'message'=>$e->getMessage()]);
 }
