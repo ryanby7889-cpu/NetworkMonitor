@@ -1,7 +1,7 @@
 -- ======================================================
 -- DATABASE : NETWORK MONITOR
 -- Author   : Ryan & ChatGPT
--- Version  : 1.1
+-- Version  : 1.2
 -- ======================================================
 
 DROP DATABASE IF EXISTS network_monitor;
@@ -97,7 +97,7 @@ CREATE TABLE settings (
 INSERT INTO settings(setting_name,setting_value)
 VALUES
 ('company_name','Network Monitor'),
-('refresh_interval','1000'),
+('refresh_interval','10000'),
 ('timezone','Asia/Jakarta');
 
 CREATE TABLE system_log (
