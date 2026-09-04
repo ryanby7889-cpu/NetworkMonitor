@@ -1,7 +1,7 @@
 -- ======================================================
 -- DATABASE : NETWORK MONITOR
 -- Author   : Ryan & ChatGPT
--- Version  : 1.2
+-- Version  : 1.3
 -- ======================================================
 
 DROP DATABASE IF EXISTS network_monitor;
@@ -31,12 +31,14 @@ CREATE TABLE router (
     password VARCHAR(100) NOT NULL,
     api_port INT DEFAULT 8728,
     status ENUM('ONLINE','OFFLINE') DEFAULT 'OFFLINE',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    is_active TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_router_active (is_active)
 );
 
 INSERT INTO router
-(router_name,ip_address,username,password)
-VALUES ('MikroTik Utama','192.168.88.1','monitor','monitor123');
+(router_name,ip_address,username,password,is_active)
+VALUES ('MikroTik Utama','192.168.88.1','monitor','monitor123',1);
 
 CREATE TABLE interfaces (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,14 +64,8 @@ CREATE TABLE traffic_log (
     tx_mbps DECIMAL(10,2),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX(created_at),
-    FOREIGN KEY(router_id) REFERENCES router(id),
-    FOREIGN KEY(interface_id) REFERENCES interfaces(id)
+    FOREIGN KEY(router_id) REFERENCES router(id)
 );
-
--- ======================================================
--- TABLE : TRAFFIC HISTORY
--- Used by collector, Traffic History page and CSV export.
--- ======================================================
 
 CREATE TABLE traffic_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
