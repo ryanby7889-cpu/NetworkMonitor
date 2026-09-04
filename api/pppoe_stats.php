@@ -10,9 +10,35 @@ function numv($v){if(is_int($v)||is_float($v))return(float)$v;if(is_array($v))re
 function pairv($v){if(is_array($v)){if(array_key_exists(0,$v)||array_key_exists(1,$v))return[numv($v[0]??0),numv($v[1]??0)];$vals=array_values($v);return[numv($vals[0]??0),numv($vals[1]??0)];}$v=trim((string)$v);if($v==='')return[0.0,0.0];$parts=preg_split('/\s*\/\s*/',$v,2);return[numv($parts[0]??0),numv($parts[1]??0)];}
 function firstv($r,$keys,$default=0){foreach($keys as $k){if(isset($r[$k])&&$r[$k]!==''&&$r[$k]!==null)return$r[$k];}return$default;}
 function norm_if($s){return trim(strtolower(trim((string)$s)),'<>');}
-function profileLimitMbps($profile){$s=strtolower(preg_replace('/\s+/','',(string)$profile));if(preg_match('/(\d+(?:\.\d+)?)m(?:bps)?[\/:](\d+(?:\.\d+)?)m/',$s,$m))return max((float)$m[1],(float)$m[2]);if(preg_match('/(\d+(?:\.\d+)?)m(?:bps)?/',$s,$m))return(float)$m[1];return 0.0;}
-
-function record_pppoe_history($active,$routerId){
+function parseRateLimit($value){
+    $s=strtolower(trim((string)$value));
+    if($s===''||$s==='0')return['upload_mbps'=>0.0,'download_mbps'=>0.0,'raw'=>(string)$value];
+    $parts=preg_split('/\s*\/\s*/',$s,2);
+    $parse=function($v){
+        $v=trim($v);
+        if($v===''||$v==='0')return 0.0;
+        if(preg_match('/^([0-9]+(?:\.[0-9]+)?)([kmgt])(?:bps)?$/i',$v,$m)){
+            $n=(float)$m[1];$u=strtolower($m[2]);$mul=['k'=>0.001,'m'=>1,'g'=>1000,'t'=>1000000][$u]??1;return $n*$mul;
+        }
+        if(is_numeric($v))return (float)$v/1000000;
+        return 0.0;
+    };
+    /* RouterOS PPP profile rate-limit is rx/tx: rx=customer upload, tx=customer download. */
+    $a=$parse($parts[0]??'');$b=$parse($parts[1]??($parts[0]??''));
+    return['upload_mbps'=>$a,'download_mbps'=>$b,'raw'=>(string)$value];
+}
+function profileFallback($profile){
+    $s=strtolower(preg_replace('/\s+/','',(string)$profile));
+    if(preg_match('/(\d+(?:\.\d+)?)m(?:bps)?[\/:](\d+(?:\.\d+)?)m/',$s,$m))return['upload_mbps'=>(float)$m[1],'download_mbps'=>(float)$m[2],'raw'=>(string)$profile];
+    if(preg_match('/(\d+(?:\.\d+)?)m(?:bps)?/',$s,$m))return['upload_mbps'=>(float)$m[1],'download_mbps'=>(float)$m[1],'raw'=>(string)$profile];
+    return['upload_mbps'=>0.0,'download_mbps'=>0.0,'raw'=>(string)$profile];
+}
+function getProfileLimit($profile,$profileMap){
+    $name=(string)$profile;
+    if(isset($profileMap[$name]))return parseRateLimit($profileMap[$name]);
+    return profileFallback($name);
+}
+function record_pppoe_history($active,$routerId,$profileMap){
     try{
         $db=(new Database())->connect();
         $db->exec("CREATE TABLE IF NOT EXISTS pppoe_traffic_history (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, username VARCHAR(128) NOT NULL, session_id VARCHAR(128) NULL, ip_address VARCHAR(64) NULL, interface_name VARCHAR(128) NULL, profile VARCHAR(128) NULL, bytes_in BIGINT UNSIGNED NOT NULL DEFAULT 0, bytes_out BIGINT UNSIGNED NOT NULL DEFAULT 0, packets_in BIGINT UNSIGNED NOT NULL DEFAULT 0, packets_out BIGINT UNSIGNED NOT NULL DEFAULT 0, recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(id), KEY idx_user_time(username,recorded_at), KEY idx_session_time(session_id,recorded_at), KEY idx_time(recorded_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -24,29 +50,25 @@ function record_pppoe_history($active,$routerId){
         $engine=new AlarmEngine();
         foreach($active as $x){
             $name=(string)$x['name'];$session=(string)($x['session_id']??'');$last->execute([$name,$session]);$prev=$last->fetch(PDO::FETCH_ASSOC);
-            /* Several UI components poll this endpoint. Keep one history snapshot per user/session per ~8 seconds. */
             if($prev && (time()-strtotime($prev['recorded_at']))<8)continue;
             $down=0.0;$up=0.0;
-            if($prev){$dt=max(1,time()-strtotime($prev['recorded_at']));
-                /* RouterOS interface counters: TX = router -> customer (download), RX = customer -> router (upload). */
-                $down=max(0,((float)$x['bytes_out']-(float)$prev['bytes_out']))/$dt;
-                $up=max(0,((float)$x['bytes_in']-(float)$prev['bytes_in']))/$dt;
-            }
-            $limit=profileLimitMbps($x['profile']??'');$downloadMbps=$down*8/1000000;$uploadMbps=$up*8/1000000;$peak=max($downloadMbps,$uploadMbps);$usage=$limit>0?($peak/$limit)*100:0;$level=$usage>=90?'critical':($usage>=80?'warning':'normal');
+            if($prev){$dt=max(1,time()-strtotime($prev['recorded_at']));$down=max(0,((float)$x['bytes_out']-(float)$prev['bytes_out']))/$dt;$up=max(0,((float)$x['bytes_in']-(float)$prev['bytes_in']))/$dt;}
+            $lim=getProfileLimit($x['profile']??'',$profileMap);$downloadMbps=$down*8/1000000;$uploadMbps=$up*8/1000000;
+            $downloadUsage=$lim['download_mbps']>0?($downloadMbps/$lim['download_mbps'])*100:0;$uploadUsage=$lim['upload_mbps']>0?($uploadMbps/$lim['upload_mbps'])*100:0;$usage=max($downloadUsage,$uploadUsage);$level=$usage>=90?'critical':($usage>=80?'warning':'normal');
             $stateQ->execute([$routerId,$name]);$st=$stateQ->fetch(PDO::FETCH_ASSOC);$hits=(int)($st['consecutive_hits']??0);if($level==='normal')$hits=0;else$hits++;
             $stateUp->execute([$routerId,$name,$x['interface']??('pppoe-'.$name),$hits,$level]);
-            if(($level==='critical'||$level==='warning')&&$hits>=3)$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,$downloadMbps,$uploadMbps,$limit);else$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,0,0,0);
+            if(($level==='critical'||$level==='warning')&&$hits>=3)$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,$downloadMbps,$uploadMbps,$lim['download_mbps'],$lim['upload_mbps']);else$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,0,0,0,0);
             $q->execute([$name,$session!==''?$session:null,$x['address']??null,$x['interface']??null,$x['profile']??null,(int)max(0,$x['bytes_in']??0),(int)max(0,$x['bytes_out']??0),(int)max(0,$x['packets_in']??0),(int)max(0,$x['packets_out']??0)]);
         }
         $db->exec("UPDATE pppoe_bandwidth_state SET consecutive_hits=0,last_level='normal',last_check=NOW() WHERE last_check < DATE_SUB(NOW(),INTERVAL 30 SECOND)");
     }catch(Throwable $e){}
 }
-
 try{
     $config=new MikroTikConfig();$router=$config->getRouter();if(!$router)throw new Exception('Konfigurasi MikroTik tidak ditemukan.');
     $api=new RouterosAPI();$api->debug=false;if(!$api->connect($router['ip_address'],$router['username'],$router['password'],$router['api_port']))throw new Exception('Gagal terhubung ke MikroTik.');
     $activeRows=(array)$api->comm('/ppp/active/print',['.proplist'=>'.id,name,address,caller-id,uptime,service,session-id,bytes,packets,bytes-in,bytes-out,packets-in,packets-out']);
     $secretRows=(array)$api->comm('/ppp/secret/print');$profileRows=(array)$api->comm('/ppp/profile/print');$ifRows=(array)$api->comm('/interface/print',['.proplist'=>'.id,name,type,rx-byte,tx-byte,rx-packet,tx-packet']);
+    $profileMap=[];foreach($profileRows as $pr){if(!is_array($pr))continue;$pn=(string)($pr['name']??'');if($pn!=='')$profileMap[$pn]=$pr['rate-limit']??'';}
     $ifMap=[];foreach($ifRows as $ir){if(!is_array($ir))continue;$iname=(string)($ir['name']??'');$key=norm_if($iname);if($key!=='')$ifMap[$key]=$ir;if(strpos($key,'pppoe-')===0)$ifMap[substr($key,6)]=$ir;}
     $secretMap=[];foreach($secretRows as $r){if(is_array($r))$secretMap[(string)($r['name']??'')]=['profile'=>$r['profile']??'default','service'=>$r['service']??'pppoe'];}
     $active=[];$totalRx=0.0;$totalTx=0.0;
@@ -54,9 +76,9 @@ try{
         $candidates=[norm_if($name),'pppoe-'.norm_if($name),'<pppoe-'.norm_if($name).'>'];$ir=null;foreach($candidates as $c){$k=norm_if($c);if(isset($ifMap[$k])){$ir=$ifMap[$k];break;}}
         if($ir){$ifRx=numv(firstv($ir,['rx-byte'],0));$ifTx=numv(firstv($ir,['tx-byte'],0));if($ifRx>0||$ifTx>0){$rx=$ifRx;$tx=$ifTx;}}
         [$pktTx,$pktRx]=pairv($r['packets']??'');$pin=numv(firstv($r,['packets-in','rx-packet'],0));$pout=numv(firstv($r,['packets-out','tx-packet'],0));if($ir){$pin=numv(firstv($ir,['rx-packet'],$pin));$pout=numv(firstv($ir,['tx-packet'],$pout));}if($pin<=0&&$pktRx>0)$pin=$pktRx;if($pout<=0&&$pktTx>0)$pout=$pktTx;
-        $totalRx+=$rx;$totalTx+=$tx;$active[]=['id'=>$r['.id']??'','name'=>$name,'address'=>$r['address']??'-','caller_id'=>$r['caller-id']??'-','uptime'=>$r['uptime']??'-','service'=>$r['service']??($secretMap[$name]['service']??'pppoe'),'profile'=>$secretMap[$name]['profile']??'default','bytes_in'=>$rx,'bytes_out'=>$tx,'total_bytes'=>$rx+$tx,'packets_in'=>$pin,'packets_out'=>$pout,'session_id'=>$r['session-id']??'-','interface'=>$ir['name']??''];
+        $profile=$secretMap[$name]['profile']??'default';$lim=getProfileLimit($profile,$profileMap);$totalRx+=$rx;$totalTx+=$tx;$active[]=['id'=>$r['.id']??'','name'=>$name,'address'=>$r['address']??'-','caller_id'=>$r['caller-id']??'-','uptime'=>$r['uptime']??'-','service'=>$r['service']??($secretMap[$name]['service']??'pppoe'),'profile'=>$profile,'rate_limit'=>$lim['raw'],'limit_upload_mbps'=>$lim['upload_mbps'],'limit_download_mbps'=>$lim['download_mbps'],'bytes_in'=>$rx,'bytes_out'=>$tx,'total_bytes'=>$rx+$tx,'packets_in'=>$pin,'packets_out'=>$pout,'session_id'=>$r['session-id']??'-','interface'=>$ir['name']??''];
     }
     $enabled=0;$disabled=0;$services=[];$profileUsage=[];foreach($secretRows as $r){if(!is_array($r))continue;$d=(($r['disabled']??'false')==='true');if($d)$disabled++;else$enabled++;$s=$r['service']??'pppoe';$services[$s]=($services[$s]??0)+1;$p=$r['profile']??'default';$profileUsage[$p]=($profileUsage[$p]??0)+1;}
-    usort($active,fn($a,$b)=>$b['total_bytes']<=>$a['total_bytes']);record_pppoe_history($active,$router['id']);$api->disconnect();
+    usort($active,fn($a,$b)=>$b['total_bytes']<=>$a['total_bytes']);record_pppoe_history($active,$router['id'],$profileMap);$api->disconnect();
     pppoe_json(true,'',['active_count'=>count($active),'account_count'=>count($secretRows),'profile_count'=>count($profileRows),'enabled_accounts'=>$enabled,'disabled_accounts'=>$disabled,'total_rx_bytes'=>$totalRx,'total_tx_bytes'=>$totalTx,'total_traffic_bytes'=>$totalRx+$totalTx,'active'=>$active,'top_users'=>array_slice($active,0,5),'services'=>$services,'profile_usage'=>$profileUsage,'updated_at'=>date('Y-m-d H:i:s')]);
 }catch(Throwable $e){pppoe_json(false,$e->getMessage(),[],500);}
