@@ -115,18 +115,6 @@ $activeMenu = $activeMenu ?? '';
     </a>
 
 
-    <!-- THEME TOGGLE -->
-    <button
-        type="button"
-        class="sidebar-theme-toggle"
-        id="themeToggle"
-        title="Ganti mode siang / malam"
-        aria-label="Ganti mode siang / malam"
-    >
-        <i class="bi bi-moon"></i>
-        <span>Mode malam</span>
-    </button>
-
     <a
         href="../settings/index.php"
         class="menu-item <?= $activeMenu === 'settings' ? 'active' : '' ?>"
@@ -183,34 +171,6 @@ document.addEventListener("DOMContentLoaded", function () {
         setSidebarState(collapsed);
 
     });
-
-    // Global light / dark mode. Preference is shared by every page.
-    const themeToggle = document.getElementById("themeToggle");
-    const THEME_KEY = "netmonitor_theme";
-
-    function setTheme(dark) {
-        document.body.classList.toggle("dark", dark);
-        document.documentElement.classList.toggle("theme-dark", dark);
-
-        if (themeToggle) {
-            const icon = themeToggle.querySelector("i");
-            const label = themeToggle.querySelector("span");
-            if (icon) icon.className = dark ? "bi bi-sun" : "bi bi-moon";
-            if (label) label.textContent = dark ? "Mode siang" : "Mode malam";
-            themeToggle.setAttribute("aria-pressed", dark ? "true" : "false");
-        }
-
-        localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
-    }
-
-    const savedTheme = localStorage.getItem(THEME_KEY);
-    setTheme(savedTheme === "dark");
-
-    if (themeToggle) {
-        themeToggle.addEventListener("click", function () {
-            setTheme(!document.body.classList.contains("dark"));
-        });
-    }
 
 });
 </script>
