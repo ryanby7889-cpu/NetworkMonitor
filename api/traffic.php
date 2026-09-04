@@ -1,8 +1,8 @@
 <?php
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-require_once "../config/mikrotik.php";
+require_once "../Config/mikrotik.php";
 require_once "../library/routeros_api.class.php";
 
 $config = new MikroTikConfig();
