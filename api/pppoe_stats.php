@@ -5,7 +5,6 @@ require_once __DIR__ . '/../Config/database.php';
 require_once __DIR__ . '/../alarm/alarm_engine.php';
 ini_set('display_errors','0');
 header('Content-Type: application/json; charset=utf-8');
-
 function pppoe_json($ok,$msg='',$data=[],$code=200){http_response_code($code);echo json_encode(array_merge(['success'=>$ok,'message'=>$msg],$data),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;}
 function numv($v){if(is_int($v)||is_float($v))return(float)$v;if(is_array($v))return numv($v[0]??0);$s=trim((string)$v);if($s==='')return 0.0;$s=preg_replace('/\s+/','',$s);if(is_numeric($s))return(float)$s;if(preg_match('/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))([kmgtpe]?i?b|[kmgtpe])$/i',$s,$m)){ $n=(float)$m[1];$u=strtolower($m[2]);$binary=strpos($u,'i')!==false;$unit=preg_replace('/i?b$/','',$u);$base=$binary?1024:1000;$powers=['k'=>1,'m'=>2,'g'=>3,'t'=>4,'p'=>5,'e'=>6];$power=$powers[$unit]??0;return$power>0?$n*pow($base,$power):$n;}return 0.0;}
 function pairv($v){if(is_array($v)){if(array_key_exists(0,$v)||array_key_exists(1,$v))return[numv($v[0]??0),numv($v[1]??0)];$vals=array_values($v);return[numv($vals[0]??0),numv($vals[1]??0)];}$v=trim((string)$v);if($v==='')return[0.0,0.0];$parts=preg_split('/\s*\/\s*/',$v,2);return[numv($parts[0]??0),numv($parts[1]??0)];}
@@ -18,29 +17,27 @@ function record_pppoe_history($active,$routerId){
         $db=(new Database())->connect();
         $db->exec("CREATE TABLE IF NOT EXISTS pppoe_traffic_history (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, username VARCHAR(128) NOT NULL, session_id VARCHAR(128) NULL, ip_address VARCHAR(64) NULL, interface_name VARCHAR(128) NULL, profile VARCHAR(128) NULL, bytes_in BIGINT UNSIGNED NOT NULL DEFAULT 0, bytes_out BIGINT UNSIGNED NOT NULL DEFAULT 0, packets_in BIGINT UNSIGNED NOT NULL DEFAULT 0, packets_out BIGINT UNSIGNED NOT NULL DEFAULT 0, recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(id), KEY idx_user_time(username,recorded_at), KEY idx_session_time(session_id,recorded_at), KEY idx_time(recorded_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $db->exec("CREATE TABLE IF NOT EXISTS pppoe_bandwidth_state (router_id INT NOT NULL, username VARCHAR(128) NOT NULL, interface_name VARCHAR(128) NOT NULL, consecutive_hits TINYINT UNSIGNED NOT NULL DEFAULT 0, last_level VARCHAR(16) NULL, last_check DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(router_id,username)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-        $last=$db->prepare('SELECT username,bytes_in,bytes_out,recorded_at FROM pppoe_traffic_history WHERE username=? ORDER BY id DESC LIMIT 1');
+        $last=$db->prepare('SELECT session_id,bytes_in,bytes_out,recorded_at FROM pppoe_traffic_history WHERE username=? AND (session_id=? OR session_id IS NULL) ORDER BY id DESC LIMIT 1');
         $q=$db->prepare('INSERT INTO pppoe_traffic_history (username,session_id,ip_address,interface_name,profile,bytes_in,bytes_out,packets_in,packets_out) VALUES (?,?,?,?,?,?,?,?,?)');
         $stateQ=$db->prepare('SELECT consecutive_hits,last_level FROM pppoe_bandwidth_state WHERE router_id=? AND username=? LIMIT 1');
         $stateUp=$db->prepare('INSERT INTO pppoe_bandwidth_state (router_id,username,interface_name,consecutive_hits,last_level,last_check) VALUES (?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE interface_name=VALUES(interface_name),consecutive_hits=VALUES(consecutive_hits),last_level=VALUES(last_level),last_check=NOW()');
         $engine=new AlarmEngine();
         foreach($active as $x){
-            $name=(string)$x['name'];$last->execute([$name]);$prev=$last->fetch(PDO::FETCH_ASSOC);
+            $name=(string)$x['name'];$session=(string)($x['session_id']??'');$last->execute([$name,$session]);$prev=$last->fetch(PDO::FETCH_ASSOC);
+            /* Several UI components poll this endpoint. Keep one history snapshot per user/session per ~8 seconds. */
+            if($prev && (time()-strtotime($prev['recorded_at']))<8)continue;
             $down=0.0;$up=0.0;
-            if($prev){$dt=max(1,time()-strtotime($prev['recorded_at']));$down=max(0,((float)$x['bytes_in']-(float)$prev['bytes_in']))/$dt;$up=max(0,((float)$x['bytes_out']-(float)$prev['bytes_out']))/$dt;}
-            $limit=profileLimitMbps($x['profile']??'');
-            $downloadMbps=$down*8/1000000;$uploadMbps=$up*8/1000000;$peak=max($downloadMbps,$uploadMbps);
-            $usage=$limit>0?($peak/$limit)*100:0;
-            $level=$usage>=90?'critical':($usage>=80?'warning':'normal');
-            $stateQ->execute([$routerId,$name]);$st=$stateQ->fetch(PDO::FETCH_ASSOC);
-            $hits=(int)($st['consecutive_hits']??0);
-            if($level==='normal'){$hits=0;}else{$hits++;}
+            if($prev){$dt=max(1,time()-strtotime($prev['recorded_at']));
+                /* RouterOS interface counters: TX = router -> customer (download), RX = customer -> router (upload). */
+                $down=max(0,((float)$x['bytes_out']-(float)$prev['bytes_out']))/$dt;
+                $up=max(0,((float)$x['bytes_in']-(float)$prev['bytes_in']))/$dt;
+            }
+            $limit=profileLimitMbps($x['profile']??'');$downloadMbps=$down*8/1000000;$uploadMbps=$up*8/1000000;$peak=max($downloadMbps,$uploadMbps);$usage=$limit>0?($peak/$limit)*100:0;$level=$usage>=90?'critical':($usage>=80?'warning':'normal');
+            $stateQ->execute([$routerId,$name]);$st=$stateQ->fetch(PDO::FETCH_ASSOC);$hits=(int)($st['consecutive_hits']??0);if($level==='normal')$hits=0;else$hits++;
             $stateUp->execute([$routerId,$name,$x['interface']??('pppoe-'.$name),$hits,$level]);
-            if($level==='critical' && $hits>=3){$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,$downloadMbps,$uploadMbps,$limit);}
-            elseif($level==='warning' && $hits>=3){$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,$downloadMbps,$uploadMbps,$limit);}
-            else{$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,0,0,0);}
-            $q->execute([$name,$x['session_id']??null,$x['address']??null,$x['interface']??null,$x['profile']??null,(int)max(0,$x['bytes_in']??0),(int)max(0,$x['bytes_out']??0),(int)max(0,$x['packets_in']??0),(int)max(0,$x['packets_out']??0)]);
+            if(($level==='critical'||$level==='warning')&&$hits>=3)$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,$downloadMbps,$uploadMbps,$limit);else$engine->checkPppoeBandwidth($routerId,$x['interface']??('pppoe-'.$name),$name,0,0,0);
+            $q->execute([$name,$session!==''?$session:null,$x['address']??null,$x['interface']??null,$x['profile']??null,(int)max(0,$x['bytes_in']??0),(int)max(0,$x['bytes_out']??0),(int)max(0,$x['packets_in']??0),(int)max(0,$x['packets_out']??0)]);
         }
-        /* Reset transient counters for users that disappeared. */
         $db->exec("UPDATE pppoe_bandwidth_state SET consecutive_hits=0,last_level='normal',last_check=NOW() WHERE last_check < DATE_SUB(NOW(),INTERVAL 30 SECOND)");
     }catch(Throwable $e){}
 }
