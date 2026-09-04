@@ -57,6 +57,26 @@ class AlarmEngine
         $this->checkPppoeDirection($routerId, $interface, $username, 'upload', $ul, $ulim, $uw, $uc);
     }
 
+    /** Resolve directional PPPoE alarms for sessions that disappeared from the live router list. */
+    public function reconcilePppoeActive($routerId, array $activeInterfaces)
+    {
+        $normalized = [];
+        foreach ($activeInterfaces as $interface) {
+            $interface = trim((string)$interface);
+            if ($interface !== '') $normalized[strtolower($interface)] = true;
+        }
+
+        $stmt = $this->pdo->prepare("SELECT id, interface_name FROM alarms WHERE router_id=:router_id AND status='active' AND alarm_type IN ('pppoe_bandwidth_download','pppoe_bandwidth_upload','pppoe_bandwidth')");
+        $stmt->execute([':router_id' => $routerId]);
+        $resolve = $this->pdo->prepare("UPDATE alarms SET status='resolved',resolved_at=NOW() WHERE id=:id AND status='active'");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $alarm) {
+            $iface = strtolower(trim((string)($alarm['interface_name'] ?? '')));
+            if ($iface === '' || !isset($normalized[$iface])) {
+                $resolve->execute([':id' => $alarm['id']]);
+            }
+        }
+    }
+
     private function checkPppoeDirection($routerId, $interface, $username, $direction, $value, $limit, $warning, $critical)
     {
         $type = 'pppoe_bandwidth_' . $direction;
