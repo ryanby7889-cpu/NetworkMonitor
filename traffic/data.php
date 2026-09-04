@@ -11,32 +11,27 @@ try {
     $page = max(1, (int)($_GET['page'] ?? 1));
     $perPage = min(100, max(10, (int)($_GET['per_page'] ?? 25)));
 
-    // Custom date/time range has priority over preset range.
-    if (!empty($_GET['from']) && !empty($_GET['to'])) {
+    $allowedRanges = ['1h' => 1, '6h' => 6, '24h' => 24, '7d' => 168];
+
+    // IMPORTANT: preset ranges use MySQL NOW(), the same clock used by
+    // collector INSERT ... NOW(). This prevents PHP/MySQL timezone drift.
+    if (isset($_GET['from'], $_GET['to']) && $_GET['from'] !== '' && $_GET['to'] !== '') {
         $from = date('Y-m-d H:i:s', strtotime($_GET['from']));
-        $to   = date('Y-m-d H:i:s', strtotime($_GET['to']));
+        $to = date('Y-m-d H:i:s', strtotime($_GET['to']));
         $range = 'custom';
+        $where = 'WHERE created_at BETWEEN :from AND :to';
+        $baseParams = [':from' => $from, ':to' => $to];
     } else {
-        $to = date('Y-m-d H:i:s');
-        $seconds = match ($range) {
-            '1h' => 3600,
-            '6h' => 21600,
-            '24h' => 86400,
-            '7d' => 604800,
-            default => 86400,
-        };
-        $from = date('Y-m-d H:i:s', time() - $seconds);
+        if (!isset($allowedRanges[$range])) $range = '24h';
+        $hours = $allowedRanges[$range];
+        $where = 'WHERE created_at >= DATE_SUB(NOW(), INTERVAL ' . $hours . ' HOUR) AND created_at <= NOW()';
+        $timeStmt = $pdo->query('SELECT DATE_SUB(NOW(), INTERVAL ' . $hours . ' HOUR) AS range_from, NOW() AS range_to');
+        $time = $timeStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $from = $time['range_from'] ?? '';
+        $to = $time['range_to'] ?? '';
+        $baseParams = [];
     }
 
-    if (strtotime($from) > strtotime($to)) {
-        [$from, $to] = [$to, $from];
-    }
-
-    $where = 'WHERE created_at BETWEEN :from AND :to';
-    $baseParams = [':from' => $from, ':to' => $to];
-
-    // Total records and aggregate statistics are calculated from the whole range,
-    // while only one page of log rows is returned to keep the page lightweight.
     $statsStmt = $pdo->prepare("SELECT COUNT(*) records,
         COALESCE(MAX(download_mbps),0) maxDownload,
         COALESCE(MAX(upload_mbps),0) maxUpload,
@@ -56,14 +51,13 @@ try {
         FROM traffic_history $where
         ORDER BY created_at DESC
         LIMIT :limit OFFSET :offset");
-    $stmt->bindValue(':from', $from);
-    $stmt->bindValue(':to', $to);
+    foreach ($baseParams as $key => $value) $stmt->bindValue($key, $value);
     $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Chart is capped at 500 points and uses the newest samples only.
+    // Chart is capped at 500 points so long periods remain lightweight.
     $chartStmt = $pdo->prepare("SELECT interface_name, download_mbps, upload_mbps, created_at
         FROM traffic_history $where
         ORDER BY created_at DESC
