@@ -1,0 +1,1 @@
+<?php $hotspotView='traffic'; require __DIR__.'/index.php';
