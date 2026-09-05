@@ -12,6 +12,7 @@ $billingView='dashboard';
 <link rel="stylesheet" href="../assets/css/common.css?v=12">
 <link rel="stylesheet" href="../assets/css/theme.css?v=1">
 <link rel="stylesheet" href="../assets/css/billing_dashboard.css?v=2">
+<link rel="stylesheet" href="../assets/css/billing_dashboard_print.css?v=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -44,7 +45,7 @@ $billingView='dashboard';
 <section class="bd-card"><div class="bd-card-head"><div><h2>Ringkasan Bulanan</h2><p>Rekap 12 bulan terakhir.</p></div></div><div class="bd-table-wrap"><table class="bd-table monthly"><thead><tr><th>Bulan</th><th>Invoice</th><th>Tagihan</th><th>Dibayar</th><th>Piutang</th><th>Collection</th></tr></thead><tbody id="monthly"></tbody></table></div></section>
 <div class="bd-foot">Data dibaca langsung dari <b>billing_customers</b> dan <b>billing_invoices</b>. Dashboard tidak menjalankan suspend otomatis.</div>
 </main></div>
-<script src="../assets/js/billing_dashboard.js?v=1"></script>
+<script src="../assets/js/billing_dashboard.js?v=2"></script>
 <script src="../assets/js/app.js?v=1"></script>
 <script src="../assets/js/alarm_notification.js?v=3"></script>
 </body></html>
