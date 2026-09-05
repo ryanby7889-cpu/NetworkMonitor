@@ -26,7 +26,6 @@ $db = new Database();
 $pdo = $db->connect();
 
 // Force this connection to WIB so NOW() stored in traffic_history is WIB.
-// Using an explicit UTC offset avoids depending on MySQL timezone tables.
 $pdo->exec("SET time_zone = '+07:00'");
 
 $config = new MikroTikConfig();
@@ -58,6 +57,119 @@ if (!$connected) {
 
 $alarmEngine->routerOnline($router['id']);
 $config->updateStatus($router['id'], 'ONLINE');
+
+/*
+|--------------------------------------------------------------------------
+| PPPoE DISCONNECT DETECTION — SERVER SIDE
+|--------------------------------------------------------------------------
+| The browser monitor is useful for the UI, but Telegram notifications
+| must not depend on a PPPoE page being open. The collector is already
+| running every cycle, so keep the previous active-session snapshot in
+| MySQL and notify the Telegram endpoint when a session disappears.
+*/
+$pdo->exec("CREATE TABLE IF NOT EXISTS pppoe_disconnect_state (
+    router_id INT NOT NULL,
+    session_key VARCHAR(255) NOT NULL,
+    username VARCHAR(128) NOT NULL,
+    address VARCHAR(64) NULL,
+    profile VARCHAR(128) NULL,
+    caller_id VARCHAR(128) NULL,
+    uptime VARCHAR(128) NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (router_id, session_key),
+    KEY idx_router_updated(router_id, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+$activeRows = $API->comm('/ppp/active/print');
+$currentSessions = [];
+
+foreach (is_array($activeRows) ? $activeRows : [] as $row) {
+    if (!is_array($row)) continue;
+    $username = trim((string)($row['name'] ?? ''));
+    if ($username === '') continue;
+
+    $sessionId = trim((string)($row['.id'] ?? $row['id'] ?? ''));
+    $address = trim((string)($row['address'] ?? '-'));
+    $profile = trim((string)($row['profile'] ?? '-'));
+    $callerId = trim((string)($row['caller-id'] ?? '-'));
+    $uptime = trim((string)($row['uptime'] ?? '-'));
+
+    // Prefer RouterOS .id. Fall back to stable connection attributes.
+    $sessionKey = $sessionId !== ''
+        ? $sessionId
+        : hash('sha256', $username.'|'.$address.'|'.$callerId);
+
+    $currentSessions[$sessionKey] = [
+        'name' => $username,
+        'address' => $address,
+        'profile' => $profile,
+        'caller_id' => $callerId,
+        'uptime' => $uptime,
+        'session_id' => $sessionId !== '' ? $sessionId : $sessionKey
+    ];
+}
+
+$stateStmt = $pdo->prepare("SELECT session_key, username, address, profile, caller_id, uptime
+    FROM pppoe_disconnect_state WHERE router_id = ?");
+$stateStmt->execute([(int)$router['id']]);
+$previousSessions = [];
+foreach ($stateStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $previousSessions[(string)$row['session_key']] = [
+        'name' => $row['username'] ?: '-',
+        'address' => $row['address'] ?: '-',
+        'profile' => $row['profile'] ?: '-',
+        'caller_id' => $row['caller_id'] ?: '-',
+        'uptime' => $row['uptime'] ?: '-',
+        'session_id' => $row['session_key']
+    ];
+}
+
+$goneSessions = [];
+if ($previousSessions) {
+    foreach ($previousSessions as $sessionKey => $old) {
+        if (!isset($currentSessions[$sessionKey])) {
+            $goneSessions[] = $old;
+        }
+    }
+}
+
+// Replace this router's snapshot with the current active-session state.
+$pdo->prepare("DELETE FROM pppoe_disconnect_state WHERE router_id = ?")
+    ->execute([(int)$router['id']]);
+$insertState = $pdo->prepare("INSERT INTO pppoe_disconnect_state
+    (router_id, session_key, username, address, profile, caller_id, uptime, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+foreach ($currentSessions as $sessionKey => $session) {
+    $insertState->execute([
+        (int)$router['id'],
+        $sessionKey,
+        $session['name'],
+        $session['address'],
+        $session['profile'],
+        $session['caller_id'],
+        $session['uptime']
+    ]);
+}
+
+if ($goneSessions && function_exists('curl_init')) {
+    $payload = json_encode([
+        'router_id' => (int)$router['id'],
+        'router_name' => (string)($router['name'] ?? ('Router '.$router['id'])),
+        'events' => array_slice($goneSessions, 0, 50)
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    $ch = curl_init('http://127.0.0.1/api/pppoe_disconnect_notify.php');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 2,
+        CURLOPT_TIMEOUT => 8
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
+}
 
 $resource = $API->comm("/system/resource/print");
 $resourceData = $resource[0] ?? [];
