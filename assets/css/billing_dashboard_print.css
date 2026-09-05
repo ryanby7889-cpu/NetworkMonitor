@@ -1,0 +1,7 @@
+@media print{
+  .sidebar,.sidebar-toggle,.bd-actions,.bd-quick,.bd-text-link,.bd-foot{display:none!important}
+  .main{margin:0!important;width:100%!important}
+  .bd-page{padding:10px!important}
+  .bd-card,.bd-stat{box-shadow:none!important;break-inside:avoid}
+  body{background:#fff!important}
+}
