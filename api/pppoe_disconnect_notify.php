@@ -24,13 +24,13 @@ try{
   if(!is_array($e))continue;
   $username=trim((string)($e['name']??''));if($username==='')continue;
   $session=trim((string)($e['session_id']??''));
-  $eventKey=hash('sha256',$routerId.'|'.$username.'|'.$session);
-  $reserve->execute([$eventKey,$routerId,$username,$session!==''?$session:null]);
-  if($reserve->rowCount()===0){$skipped++;continue;}
   $address=trim((string)($e['address']??'-'));
   $profile=trim((string)($e['profile']??'-'));
   $caller=trim((string)($e['caller_id']??'-'));
   $uptime=trim((string)($e['uptime']??'-'));
+  $eventKey=hash('sha256',$routerId.'|'.$username.'|'.$session.'|'.$address.'|'.$caller.'|'.$uptime);
+  $reserve->execute([$eventKey,$routerId,$username,$session!==''&&$session!=='-'?$session:null]);
+  if($reserve->rowCount()===0){$skipped++;continue;}
   $time=date('d-m-Y H:i:s');
   $text="🔴 <b>PPPoE DISCONNECT</b>\n\n".
         "Router : <b>".htmlspecialchars($routerName,ENT_QUOTES,'UTF-8')."</b>\n".
