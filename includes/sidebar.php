@@ -2,7 +2,7 @@
 $activeMenu = $activeMenu ?? '';
 $hotspotView = $hotspotView ?? '';
 ?>
-
+<link rel="stylesheet" href="../assets/css/hotspot_sidebar.css?v=1">
 <div class="sidebar" id="netSidebar">
     <div class="logo"><i class="bi bi-router"></i><span>NetMonitor</span></div>
     <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Show / Hide Sidebar" aria-label="Show / Hide Sidebar" aria-expanded="true"><i class="bi bi-chevron-left"></i></button>
@@ -28,11 +28,8 @@ $hotspotView = $hotspotView ?? '';
     <a href="../alarm/index.php" class="menu-item <?= $activeMenu === 'alarm' ? 'active' : '' ?>" title="Alarm"><i class="bi bi-exclamation-triangle"></i><span>Alarm</span></a>
     <a href="../settings/index.php" class="menu-item <?= $activeMenu === 'settings' ? 'active' : '' ?>" title="Settings"><i class="bi bi-gear"></i><span>Settings</span></a>
 </div>
-
 <script>
 window.HOTSPOT_VIEW=<?= json_encode($hotspotView,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
-document.addEventListener("DOMContentLoaded",function(){const sidebar=document.getElementById("netSidebar"),toggle=document.getElementById("sidebarToggle");if(!sidebar||!toggle)return;const key="netmonitor_sidebar";function setState(c){sidebar.classList.toggle("collapsed",c);toggle.setAttribute("aria-expanded",c?"false":"true");localStorage.setItem(key,c?"collapsed":"expanded")}if(localStorage.getItem(key)==="collapsed"){sidebar.classList.add("collapsed");toggle.setAttribute("aria-expanded","false")}toggle.addEventListener("click",()=>setState(!sidebar.classList.contains("collapsed")));const parent=sidebar.querySelector(".hotspot-parent");if(parent)parent.addEventListener("click",function(e){if(sidebar.classList.contains("collapsed")){e.preventDefault();sidebar.classList.remove("collapsed");setState(false)}})});
+document.addEventListener("DOMContentLoaded",function(){const s=document.getElementById("netSidebar"),t=document.getElementById("sidebarToggle");if(!s||!t)return;const k="netmonitor_sidebar";function set(c){s.classList.toggle("collapsed",c);t.setAttribute("aria-expanded",c?"false":"true");localStorage.setItem(k,c?"collapsed":"expanded")}if(localStorage.getItem(k)==="collapsed"){s.classList.add("collapsed");t.setAttribute("aria-expanded","false")}t.addEventListener("click",()=>set(!s.classList.contains("collapsed")));const p=s.querySelector(".hotspot-parent");if(p)p.addEventListener("click",e=>{if(s.classList.contains("collapsed")){e.preventDefault();set(false)}})});
 </script>
-
-<script src="../assets/js/alarm_notification.js?v=1"></script>
-<script src="../assets/js/dashboard_pro4.js?v=4"></script>
+<script src="../assets/js/alarm_notification.js?v=1"></script><script src="../assets/js/dashboard_pro4.js?v=4"></script>
