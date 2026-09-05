@@ -1,29 +1,24 @@
-/* NetMonitor — PPPoE disconnect Telegram monitor */
+/* NetMonitor — PPPoE disconnect Telegram monitor PRO v2 */
 (function(){'use strict';
 if(!location.pathname.toLowerCase().includes('/pppoe/'))return;
-const statsApi='../api/pppoe_stats.php';
 const notifyApi='../api/pppoe_disconnect_notify.php';
-let previous=null, busy=false;
+let previousByRouter={},busy=false;
 function key(x){return String(x.session_id||'')+'|'+String(x.name||'');}
 function clean(x){return {name:x.name||'-',address:x.address||'-',profile:x.profile||'-',caller_id:x.caller_id||'-',uptime:x.uptime||'-',session_id:x.session_id||'-'};}
-async function poll(){
- if(busy||document.visibilityState!=='visible')return;
+async function processStats(d){
+ if(busy||!d||!d.success)return;
+ const routerId=Number(d.router_id||0);if(routerId<=0)return;
+ const current=Array.isArray(d.active)?d.active.map(clean):[];
+ const previous=previousByRouter[routerId];
+ previousByRouter[routerId]=current;
+ if(!Array.isArray(previous)||!previous.length)return;
+ const currentKeys=new Set(current.map(key));
+ const gone=previous.filter(x=>!currentKeys.has(key(x)));
+ if(!gone.length)return;
  busy=true;
- try{
-  const r=await fetch(statsApi+'?tg='+Date.now(),{cache:'no-store'}),d=await r.json();
-  if(!r.ok||!d.success)throw Error(d.message||'PPPoE stats gagal');
-  const current=Array.isArray(d.active)?d.active.map(clean):[];
-  if(Array.isArray(previous)){
-   const currentKeys=new Set(current.map(key));
-   const gone=previous.filter(x=>!currentKeys.has(key(x)));
-   if(gone.length){
-    try{await fetch(notifyApi,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({router_id:d.router_id,router_name:d.router_name,events:gone})});}catch(_e){}
-   }
-  }
-  previous=current;
- }catch(_e){}
+ try{await fetch(notifyApi,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({router_id:routerId,router_name:d.router_name||'Router',events:gone})});}
+ catch(_e){}
  finally{busy=false;}
 }
-function init(){poll();setInterval(poll,10000)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+window.addEventListener('pppoe:stats',e=>processStats(e.detail&&e.detail.data));
 })();
