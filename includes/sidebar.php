@@ -25,6 +25,7 @@ $pppoeView = $pppoeView ?? '';
             <a href="../pppoe/profiles.php" class="<?= $pppoeView === 'profiles' ? 'active' : '' ?>"><i class="bi bi-diagram-3"></i><span>Profile</span></a>
             <a href="../pppoe/traffic.php" class="<?= $pppoeView === 'traffic' ? 'active' : '' ?>"><i class="bi bi-speedometer2"></i><span>Traffic Ranking</span></a>
             <a href="../pppoe/history_index.php" class="<?= $pppoeView === 'history' ? 'active' : '' ?>"><i class="bi bi-clock-history"></i><span>Traffic History</span></a>
+            <a href="../pppoe/disconnect_history.php" class="<?= $pppoeView === 'disconnect_history' ? 'active' : '' ?>"><i class="bi bi-person-x"></i><span>Disconnect History</span></a>
         </div>
     </div>
     <div class="hotspot-menu <?= $activeMenu === 'hotspot' ? 'open' : '' ?>">
@@ -45,6 +46,6 @@ $pppoeView = $pppoeView ?? '';
 <script>
 window.HOTSPOT_VIEW=<?= json_encode($hotspotView,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
 window.PPPOE_VIEW=<?= json_encode($pppoeView,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
-document.addEventListener("DOMContentLoaded",function(){const s=document.getElementById("netSidebar"),t=document.getElementById("sidebarToggle");if(!s||!t)return;const k="netmonitor_sidebar";function set(c){s.classList.toggle("collapsed",c);t.setAttribute("aria-expanded",c?"false":"true");localStorage.setItem(k,c?"collapsed":"expanded")}if(localStorage.getItem(k)==="collapsed"){s.classList.add("collapsed");t.setAttribute("aria-expanded","false")}t.addEventListener("click",()=>set(!s.classList.contains("collapsed")));s.querySelectorAll(".hotspot-parent,.pppoe-parent").forEach(p=>p.addEventListener("click",e=>{if(s.classList.contains("collapsed")){e.preventDefault();set(false)}}));});
+document.addEventListener("DOMContentLoaded",function(){const s=document.getElementById("netSidebar"),t=document.getElementById("sidebarToggle");if(!s||!t)return;const k="netmonitor_sidebar";function set(c){s.classList.toggle("collapsed",c);t.setAttribute("aria-expanded",c?"false":"true");localStorage.setItem(k,c?"collapsed":"expanded")}if(localStorage.getItem(k)==="collapsed"){s.classList.add("collapsed");t.setAttribute("aria-expanded","false")}t.addEventListener("click",()=>set(!s.classList.contains("collapsed")));s.querySelectorAll(".hotspot-parent,.pppoe-parent").forEach(p=>p.addEventListener("click",e=>{if(s.classList.contains("collapsed")){e.preventDefault();set(false)}});});
 </script>
 <script src="../assets/js/alarm_notification.js?v=1"></script><script src="../assets/js/dashboard_pro4.js?v=4"></script><script src="../assets/js/hotspot_subpage.js?v=1"></script><script src="../assets/js/app.js?v=6"></script><script src="../assets/js/telegram_settings.js?v=1"></script><script src="../assets/js/pppoe_disconnect_monitor.js?v=2"></script>
