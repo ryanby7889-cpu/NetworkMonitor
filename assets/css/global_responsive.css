@@ -1,10 +1,13 @@
-/* NETMONITOR GLOBAL RESPONSIVE SHELL */
-html,body{max-width:100%;overflow-x:hidden}
-.main,.content,.main-content{width:auto!important;max-width:none;min-width:0}
-main,.main,.content,.main-content,.app-content,.app-shell,.page-header,.topbar,.card,.card-modern,.filter-card,.table-responsive{min-width:0}
-.table-responsive,.table-wrap,.table-container,.data-table-wrap,.overflow-auto{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* NETMONITOR GLOBAL RESPONSIVE SHELL - v2 */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.main,.content,.main-content{width:auto!important;max-width:100%;min-width:0;box-sizing:border-box}
+main,.main,.content,.main-content,.app-content,.app-shell,.page-header,.topbar,.card,.card-modern,.filter-card,.ppp-subpage,.ppp-card,.pppoe-page,.pppoe-card{min-width:0;max-width:100%}
+.table-responsive,.table-wrap,.table-container,.data-table-wrap,.overflow-auto,.ppp-table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.table-responsive>table,.ppp-table-wrap>table{max-width:none}
 img,svg,video,canvas{max-width:100%}
-input,select,textarea,button{max-width:100%}
+input,select,textarea,button{max-width:100%;box-sizing:border-box}
+.ppp-card-head,.pppoe-card-header,.pppoe-page-header,.ppp-head,.page-header,.topbar{min-width:0;max-width:100%}
+.ppp-card-head>*,.pppoe-card-header>* ,.pppoe-page-header>* ,.ppp-head>*{min-width:0}
 @media(min-width:993px){.main,.content,.main-content{margin-left:var(--sidebar-open,220px)}.sidebar.collapsed~.main,.sidebar.collapsed~.content,.sidebar.collapsed~.main-content{margin-left:var(--sidebar-closed,70px)}}
 @media(max-width:992px){.main,.content,.main-content{margin-left:var(--sidebar-closed,70px)}}
-@media(max-width:576px){.main,.content,.main-content{margin-left:var(--sidebar-closed,70px);padding-left:18px;padding-right:18px}}
+@media(max-width:576px){.main,.content,.main-content{margin-left:var(--sidebar-closed,70px);padding-left:18px;padding-right:18px}.ppp-card-head,.pppoe-card-header,.pppoe-page-header,.ppp-head{flex-wrap:wrap}}
