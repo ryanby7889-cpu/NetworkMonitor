@@ -24,8 +24,6 @@ date_default_timezone_set('Asia/Jakarta');
 
 $db = new Database();
 $pdo = $db->connect();
-
-// Force this connection to WIB so NOW() stored in traffic_history is WIB.
 $pdo->exec("SET time_zone = '+07:00'");
 
 $config = new MikroTikConfig();
@@ -62,10 +60,10 @@ $config->updateStatus($router['id'], 'ONLINE');
 |--------------------------------------------------------------------------
 | PPPoE DISCONNECT DETECTION — SERVER SIDE
 |--------------------------------------------------------------------------
-| The browser monitor is useful for the UI, but Telegram notifications
-| must not depend on a PPPoE page being open. The collector is already
-| running every cycle, so keep the previous active-session snapshot in
-| MySQL and notify the Telegram endpoint when a session disappears.
+| Never replace the previous snapshot when RouterOS returns a failed/invalid
+| response. An empty active-session list is valid; a failed command is not.
+| This prevents a temporary RouterOS/API error from generating fake
+| disconnect events for every PPPoE user.
 */
 $pdo->exec("CREATE TABLE IF NOT EXISTS pppoe_disconnect_state (
     router_id INT NOT NULL,
@@ -81,74 +79,81 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS pppoe_disconnect_state (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 $activeRows = $API->comm('/ppp/active/print');
+$activeRowsValid = is_array($activeRows);
 $currentSessions = [];
 
-foreach (is_array($activeRows) ? $activeRows : [] as $row) {
-    if (!is_array($row)) continue;
-    $username = trim((string)($row['name'] ?? ''));
-    if ($username === '') continue;
+if ($activeRowsValid) {
+    foreach ($activeRows as $row) {
+        if (!is_array($row)) continue;
+        $username = trim((string)($row['name'] ?? ''));
+        if ($username === '') continue;
 
-    $sessionId = trim((string)($row['.id'] ?? $row['id'] ?? ''));
-    $address = trim((string)($row['address'] ?? '-'));
-    $profile = trim((string)($row['profile'] ?? '-'));
-    $callerId = trim((string)($row['caller-id'] ?? '-'));
-    $uptime = trim((string)($row['uptime'] ?? '-'));
+        $sessionId = trim((string)($row['.id'] ?? $row['id'] ?? ''));
+        $address = trim((string)($row['address'] ?? '-'));
+        $profile = trim((string)($row['profile'] ?? '-'));
+        $callerId = trim((string)($row['caller-id'] ?? '-'));
+        $uptime = trim((string)($row['uptime'] ?? '-'));
 
-    // Prefer RouterOS .id. Fall back to stable connection attributes.
-    $sessionKey = $sessionId !== ''
-        ? $sessionId
-        : hash('sha256', $username.'|'.$address.'|'.$callerId);
+        $sessionKey = $sessionId !== ''
+            ? $sessionId
+            : hash('sha256', $username.'|'.$address.'|'.$callerId);
 
-    $currentSessions[$sessionKey] = [
-        'name' => $username,
-        'address' => $address,
-        'profile' => $profile,
-        'caller_id' => $callerId,
-        'uptime' => $uptime,
-        'session_id' => $sessionId !== '' ? $sessionId : $sessionKey
-    ];
-}
-
-$stateStmt = $pdo->prepare("SELECT session_key, username, address, profile, caller_id, uptime
-    FROM pppoe_disconnect_state WHERE router_id = ?");
-$stateStmt->execute([(int)$router['id']]);
-$previousSessions = [];
-foreach ($stateStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    $previousSessions[(string)$row['session_key']] = [
-        'name' => $row['username'] ?: '-',
-        'address' => $row['address'] ?: '-',
-        'profile' => $row['profile'] ?: '-',
-        'caller_id' => $row['caller_id'] ?: '-',
-        'uptime' => $row['uptime'] ?: '-',
-        'session_id' => $row['session_key']
-    ];
-}
-
-$goneSessions = [];
-if ($previousSessions) {
-    foreach ($previousSessions as $sessionKey => $old) {
-        if (!isset($currentSessions[$sessionKey])) {
-            $goneSessions[] = $old;
-        }
+        $currentSessions[$sessionKey] = [
+            'name' => $username,
+            'address' => $address,
+            'profile' => $profile,
+            'caller_id' => $callerId,
+            'uptime' => $uptime,
+            'session_id' => $sessionId !== '' ? $sessionId : $sessionKey
+        ];
     }
 }
 
-// Replace this router's snapshot with the current active-session state.
-$pdo->prepare("DELETE FROM pppoe_disconnect_state WHERE router_id = ?")
-    ->execute([(int)$router['id']]);
-$insertState = $pdo->prepare("INSERT INTO pppoe_disconnect_state
-    (router_id, session_key, username, address, profile, caller_id, uptime, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
-foreach ($currentSessions as $sessionKey => $session) {
-    $insertState->execute([
-        (int)$router['id'],
-        $sessionKey,
-        $session['name'],
-        $session['address'],
-        $session['profile'],
-        $session['caller_id'],
-        $session['uptime']
-    ]);
+$goneSessions = [];
+
+if ($activeRowsValid) {
+    $stateStmt = $pdo->prepare("SELECT session_key, username, address, profile, caller_id, uptime
+        FROM pppoe_disconnect_state WHERE router_id = ?");
+    $stateStmt->execute([(int)$router['id']]);
+    $previousSessions = [];
+
+    foreach ($stateStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $previousSessions[(string)$row['session_key']] = [
+            'name' => $row['username'] ?: '-',
+            'address' => $row['address'] ?: '-',
+            'profile' => $row['profile'] ?: '-',
+            'caller_id' => $row['caller_id'] ?: '-',
+            'uptime' => $row['uptime'] ?: '-',
+            'session_id' => $row['session_key']
+        ];
+    }
+
+    if ($previousSessions) {
+        foreach ($previousSessions as $sessionKey => $old) {
+            if (!isset($currentSessions[$sessionKey])) {
+                $goneSessions[] = $old;
+            }
+        }
+    }
+
+    // Only replace this router's snapshot after a valid RouterOS response.
+    $pdo->prepare("DELETE FROM pppoe_disconnect_state WHERE router_id = ?")
+        ->execute([(int)$router['id']]);
+    $insertState = $pdo->prepare("INSERT INTO pppoe_disconnect_state
+        (router_id, session_key, username, address, profile, caller_id, uptime, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+
+    foreach ($currentSessions as $sessionKey => $session) {
+        $insertState->execute([
+            (int)$router['id'],
+            $sessionKey,
+            $session['name'],
+            $session['address'],
+            $session['profile'],
+            $session['caller_id'],
+            $session['uptime']
+        ]);
+    }
 }
 
 if ($goneSessions && function_exists('curl_init')) {
