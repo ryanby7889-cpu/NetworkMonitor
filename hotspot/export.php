@@ -1,0 +1,9 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/../Config/database.php';
+require_once __DIR__ . '/../Config/mikrotik.php';
+ini_set('display_errors','0');
+$username=trim((string)($_GET['username']??''));
+$days=max(1,min(90,(int)($_GET['days']??30)));
+if($username===''){http_response_code(400);exit('Username wajib diisi.');}
+try{$cfg=new MikroTikConfig();$rid=(int)($_GET['router_id']??0);$router=$rid>0?$cfg->getRouterById($rid):$cfg->getRouter();if(!$router)throw new RuntimeException('Router tidak ditemukan.');$rid=(int)$router['id'];$pdo=(new Database())->connect();$q=$pdo->prepare("SELECT recorded_at,session_id,bytes_in,bytes_out,upload_bps,download_bps,address,interface_name FROM hotspot_traffic_user_history WHERE router_id=? AND username=? AND recorded_at>=DATE_SUB(NOW(),INTERVAL {$days} DAY) ORDER BY recorded_at ASC,id ASC");$q->execute([$rid,$username]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);$filename='hotspot_'.$username.'_'.date('Ymd_His').'.csv';header('Content-Type: text/csv; charset=utf-8');header('Content-Disposition: attachment; filename="'.preg_replace('/[^A-Za-z0-9._-]/','_',$filename).'"');echo "\xEF\xBB\xBF";$out=fopen('php://output','w');fputcsv($out,['HOTSPOT CUSTOMER USAGE REPORT']);fputcsv($out,['Username',$username]);fputcsv($out,['Router',(string)$router['name']]);fputcsv($out,['Periode',$days.' hari']);fputcsv($out,[]);fputcsv($out,['Waktu','Session ID','RX Upload Cumulative','TX Download Cumulative','Upload bps','Download bps','IP Address','Interface']);foreach($rows as $r)fputcsv($out,[$r['recorded_at'],$r['session_id'],$r['bytes_in'],$r['bytes_out'],$r['upload_bps'],$r['download_bps'],$r['address'],$r['interface_name']]);fclose($out);exit;}catch(Throwable $e){http_response_code(500);header('Content-Type: text/plain; charset=utf-8');echo 'Export gagal: '.$e->getMessage();}
