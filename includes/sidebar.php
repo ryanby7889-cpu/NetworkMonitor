@@ -7,6 +7,7 @@ $pppoeView = $pppoeView ?? '';
 <link rel="stylesheet" href="../assets/css/hotspot_subpage.css?v=1">
 <link rel="stylesheet" href="../assets/css/pppoe_subnav.css?v=1">
 <link rel="stylesheet" href="../assets/css/global_responsive.css?v=1">
+<link rel="stylesheet" href="../assets/css/telegram_settings.css?v=1">
 <div class="sidebar" id="netSidebar">
     <div class="logo"><i class="bi bi-router"></i><span>NetMonitor</span></div>
     <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Show / Hide Sidebar" aria-label="Show / Hide Sidebar" aria-expanded="true"><i class="bi bi-chevron-left"></i></button>
@@ -46,4 +47,4 @@ window.HOTSPOT_VIEW=<?= json_encode($hotspotView,JSON_UNESCAPED_UNICODE|JSON_UNE
 window.PPPOE_VIEW=<?= json_encode($pppoeView,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
 document.addEventListener("DOMContentLoaded",function(){const s=document.getElementById("netSidebar"),t=document.getElementById("sidebarToggle");if(!s||!t)return;const k="netmonitor_sidebar";function set(c){s.classList.toggle("collapsed",c);t.setAttribute("aria-expanded",c?"false":"true");localStorage.setItem(k,c?"collapsed":"expanded")}if(localStorage.getItem(k)==="collapsed"){s.classList.add("collapsed");t.setAttribute("aria-expanded","false")}t.addEventListener("click",()=>set(!s.classList.contains("collapsed")));s.querySelectorAll(".hotspot-parent,.pppoe-parent").forEach(p=>p.addEventListener("click",e=>{if(s.classList.contains("collapsed")){e.preventDefault();set(false)}}));});
 </script>
-<script src="../assets/js/alarm_notification.js?v=1"></script><script src="../assets/js/dashboard_pro4.js?v=4"></script><script src="../assets/js/hotspot_subpage.js?v=1"></script><script src="../assets/js/app.js?v=6"></script>
+<script src="../assets/js/alarm_notification.js?v=1"></script><script src="../assets/js/dashboard_pro4.js?v=4"></script><script src="../assets/js/hotspot_subpage.js?v=1"></script><script src="../assets/js/app.js?v=6"></script><script src="../assets/js/telegram_settings.js?v=1"></script>
