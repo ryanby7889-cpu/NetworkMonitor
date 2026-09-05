@@ -6,6 +6,7 @@ $pppoeView = $pppoeView ?? '';
 <link rel="stylesheet" href="../assets/css/hotspot_sidebar.css?v=2">
 <link rel="stylesheet" href="../assets/css/hotspot_subpage.css?v=1">
 <link rel="stylesheet" href="../assets/css/pppoe_subnav.css?v=1">
+<link rel="stylesheet" href="../assets/css/global_responsive.css?v=1">
 <div class="sidebar" id="netSidebar">
     <div class="logo"><i class="bi bi-router"></i><span>NetMonitor</span></div>
     <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Show / Hide Sidebar" aria-label="Show / Hide Sidebar" aria-expanded="true"><i class="bi bi-chevron-left"></i></button>
