@@ -2,7 +2,7 @@
 $activeMenu = $activeMenu ?? '';
 $hotspotView = $hotspotView ?? '';
 ?>
-<link rel="stylesheet" href="../assets/css/hotspot_sidebar.css?v=1">
+<link rel="stylesheet" href="../assets/css/hotspot_sidebar.css?v=2">
 <link rel="stylesheet" href="../assets/css/hotspot_subpage.css?v=1">
 <div class="sidebar" id="netSidebar">
     <div class="logo"><i class="bi bi-router"></i><span>NetMonitor</span></div>
@@ -22,7 +22,6 @@ $hotspotView = $hotspotView ?? '';
             <a href="../hotspot/active.php" class="<?= $hotspotView === 'active' ? 'active' : '' ?>"><i class="bi bi-broadcast-pin"></i><span>Active Session</span></a>
             <a href="../hotspot/profiles.php" class="<?= $hotspotView === 'profiles' ? 'active' : '' ?>"><i class="bi bi-diagram-3"></i><span>Profile</span></a>
             <a href="../hotspot/traffic.php" class="<?= $hotspotView === 'traffic' ? 'active' : '' ?>"><i class="bi bi-speedometer"></i><span>Live Traffic</span></a>
-            <a href="../hotspot/history.php" class="<?= $hotspotView === 'history' ? 'active' : '' ?>"><i class="bi bi-clock-history"></i><span>Traffic History</span></a>
         </div>
     </div>
     <a href="../billing/index.php" class="menu-item <?= $activeMenu === 'billing' ? 'active' : '' ?>" title="Billing"><i class="bi bi-receipt"></i><span>Billing</span></a>
