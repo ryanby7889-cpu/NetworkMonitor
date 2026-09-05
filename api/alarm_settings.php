@@ -1,50 +1,57 @@
 <?php
-
-header('Content-Type: application/json');
-
-require_once "../config/database.php";
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 try {
+    require_once __DIR__ . '/../Config/database.php';
+    $pdo = (new Database())->connect();
 
-    $db = new Database();
-    $pdo = $db->connect();
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        $stmt = $pdo->query("SELECT setting_name, setting_value FROM settings WHERE setting_name IN ('download_warning','download_critical','upload_warning','upload_critical')");
+        $s = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        echo json_encode([
+            'success' => true,
+            'download_warning' => (float)($s['download_warning'] ?? 80),
+            'download_critical' => (float)($s['download_critical'] ?? 90),
+            'upload_warning' => (float)($s['upload_warning'] ?? 20),
+            'upload_critical' => (float)($s['upload_critical'] ?? 30)
+        ]);
+        exit;
+    }
 
-    $stmt = $pdo->query("
-        SELECT setting_name, setting_value
-        FROM settings
-        WHERE setting_name IN (
-            'download_warning',
-            'download_critical',
-            'upload_warning',
-            'upload_critical'
-        )
-    ");
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method tidak diizinkan.']);
+        exit;
+    }
 
-    $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $dw = max(0, min(100, (float)($_POST['download_warning'] ?? 80)));
+    $dc = max(0, min(100, (float)($_POST['download_critical'] ?? 90)));
+    $uw = max(0, min(100, (float)($_POST['upload_warning'] ?? 20)));
+    $uc = max(0, min(100, (float)($_POST['upload_critical'] ?? 30)));
 
-    echo json_encode([
-        "success" => true,
+    if ($dc <= $dw) throw new RuntimeException('Download Critical harus lebih besar dari Download Warning.');
+    if ($uc <= $uw) throw new RuntimeException('Upload Critical harus lebih besar dari Upload Warning.');
 
-        "download_warning" =>
-            floatval($settings["download_warning"] ?? 80),
+    foreach ([
+        'download_warning' => $dw,
+        'download_critical' => $dc,
+        'upload_warning' => $uw,
+        'upload_critical' => $uc
+    ] as $name => $value) {
+        $check = $pdo->prepare('SELECT id FROM settings WHERE setting_name=? LIMIT 1');
+        $check->execute([$name]);
+        if ($check->fetchColumn()) {
+            $stmt = $pdo->prepare('UPDATE settings SET setting_value=? WHERE setting_name=?');
+            $stmt->execute([(string)$value, $name]);
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO settings(setting_name,setting_value) VALUES(?,?)');
+            $stmt->execute([$name, (string)$value]);
+        }
+    }
 
-        "download_critical" =>
-            floatval($settings["download_critical"] ?? 90),
-
-        "upload_warning" =>
-            floatval($settings["upload_warning"] ?? 20),
-
-        "upload_critical" =>
-            floatval($settings["upload_critical"] ?? 30)
-    ]);
-
-} catch (Exception $e) {
-
-    http_response_code(500);
-
-    echo json_encode([
-        "success" => false,
-        "message" => $e->getMessage()
-    ]);
-
+    echo json_encode(['success' => true, 'message' => 'Threshold traffic Ether1 berhasil disimpan.']);
+} catch (Throwable $e) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
