@@ -1,118 +1,20 @@
 <?php
 declare(strict_types=1);
-
 require_once __DIR__ . '/../Config/database.php';
 require_once __DIR__ . '/../Config/mikrotik.php';
 require_once __DIR__ . '/../library/routeros_api.class.php';
-
-ini_set('display_errors', '0');
-header('Content-Type: application/json; charset=utf-8');
-
-function hs_json(bool $success, string $message = '', array $data = [], int $code = 200): void {
-    http_response_code($code);
-    echo json_encode(array_merge(['success'=>$success,'message'=>$message,'status'=>$success?'online':'offline'], $data), JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-function hs_tables(PDO $pdo): void {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS hotspot_bandwidth_state (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        router_id INT NULL,
-        username VARCHAR(100) NOT NULL,
-        session_id VARCHAR(120) NOT NULL DEFAULT '',
-        interface_name VARCHAR(150) NOT NULL DEFAULT '',
-        address VARCHAR(64) NOT NULL DEFAULT '',
-        bytes_in BIGINT UNSIGNED NOT NULL DEFAULT 0,
-        bytes_out BIGINT UNSIGNED NOT NULL DEFAULT 0,
-        sampled_at DATETIME NOT NULL,
-        hits INT NOT NULL DEFAULT 0,
-        UNIQUE KEY uq_hotspot_state (router_id,username,session_id),
-        KEY idx_hotspot_state_time (sampled_at),
-        KEY idx_hotspot_state_router (router_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS hotspot_traffic_history (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        router_id INT NULL,
-        recorded_at DATETIME NOT NULL,
-        download_bps DECIMAL(20,2) NOT NULL DEFAULT 0,
-        upload_bps DECIMAL(20,2) NOT NULL DEFAULT 0,
-        active_total INT NOT NULL DEFAULT 0,
-        KEY idx_hotspot_history_router_time (router_id,recorded_at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-}
-
-function hs_uptime_key(array $r): string {
-    $sid = trim((string)($r['session-id'] ?? ''));
-    if ($sid !== '') return $sid;
-    return trim((string)($r['.id'] ?? '').'|'.(string)($r['address'] ?? '').'|'.(string)($r['user'] ?? ''));
-}
-
-try {
-    $config = new MikroTikConfig();
-    $router = $config->getRouter();
-    if (!$router) hs_json(false, 'Router aktif tidak ditemukan.', [], 500);
-
-    $pdo = (new Database())->connect();
-    hs_tables($pdo);
-
-    $api = new RouterosAPI();
-    $api->debug = false;
-    if (!$api->connect($router['ip_address'], $router['username'], $router['password'], $router['api_port'])) {
-        hs_json(false, 'Gagal terhubung ke MikroTik.', ['router_id'=>(int)$router['id'],'router_name'=>(string)$router['name']], 503);
-    }
-
-    $raw = (array)$api->comm('/ip/hotspot/active/print');
-    $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Jakarta'));
-    $nowSql = $now->format('Y-m-d H:i:s');
-    $downloadTotal = 0.0;
-    $uploadTotal = 0.0;
-    $items = [];
-
-    $sel = $pdo->prepare('SELECT bytes_in,bytes_out,sampled_at,hits FROM hotspot_bandwidth_state WHERE router_id <=> ? AND username=? AND session_id=? LIMIT 1');
-    $ins = $pdo->prepare('INSERT INTO hotspot_bandwidth_state (router_id,username,session_id,interface_name,address,bytes_in,bytes_out,sampled_at,hits) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE interface_name=VALUES(interface_name),address=VALUES(address),bytes_in=VALUES(bytes_in),bytes_out=VALUES(bytes_out),sampled_at=VALUES(sampled_at),hits=VALUES(hits)');
-
-    foreach ($raw as $r) {
-        if (!is_array($r)) continue;
-        $user = trim((string)($r['user'] ?? ''));
-        if ($user === '') continue;
-        $sid = hs_uptime_key($r);
-        $in = max(0,(int)($r['bytes-in'] ?? 0));
-        $out = max(0,(int)($r['bytes-out'] ?? 0));
-        $address = trim((string)($r['address'] ?? ''));
-        $sel->execute([(int)$router['id'],$user,$sid]);
-        $prev = $sel->fetch();
-        $up = 0.0; $down = 0.0; $dt = 0.0; $hits = 0;
-        if ($prev) {
-            $prevAt = strtotime((string)$prev['sampled_at']);
-            $dt = $prevAt ? max(0.5, time()-$prevAt) : 0.0;
-            if ($dt > 0) {
-                $up = $in >= (int)$prev['bytes_in'] ? (($in-(int)$prev['bytes_in'])*8/$dt) : 0.0;
-                $down = $out >= (int)$prev['bytes_out'] ? (($out-(int)$prev['bytes_out'])*8/$dt) : 0.0;
-            }
-            $hits = (int)$prev['hits'] + 1;
-        }
-        $ins->execute([(int)$router['id'],$user,$sid,'', $address,$in,$out,$nowSql,$hits]);
-        $downloadTotal += $down;
-        $uploadTotal += $up;
-        $items[] = [
-            'id'=>(string)($r['.id'] ?? ''), 'user'=>$user, 'address'=>$address,
-            'mac_address'=>(string)($r['mac-address'] ?? ''), 'uptime'=>(string)($r['uptime'] ?? ''),
-            'session_id'=>(string)($r['session-id'] ?? ''), 'bytes_in'=>(string)$in, 'bytes_out'=>(string)$out,
-            'upload_bps'=>$up, 'download_bps'=>$down, 'total_bytes'=>(string)($in+$out)
-        ];
-    }
-
-    $hist = $pdo->prepare('INSERT INTO hotspot_traffic_history (router_id,recorded_at,download_bps,upload_bps,active_total) VALUES (?,?,?,?,?)');
-    $hist->execute([(int)$router['id'],$nowSql,$downloadTotal,$uploadTotal,count($items)]);
-    $pdo->prepare('DELETE FROM hotspot_traffic_history WHERE recorded_at < DATE_SUB(NOW(), INTERVAL 30 DAY)')->execute();
-    $pdo->prepare('DELETE FROM hotspot_bandwidth_state WHERE sampled_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)')->execute();
-
-    $h = $pdo->prepare("SELECT DATE_FORMAT(recorded_at,'%H:%i:%s') label,download_bps,upload_bps,active_total FROM hotspot_traffic_history WHERE router_id=? AND recorded_at >= DATE_SUB(NOW(),INTERVAL 1 HOUR) ORDER BY recorded_at ASC LIMIT 360");
-    $h->execute([(int)$router['id']]);
-    $history = $h->fetchAll();
-    $api->disconnect();
-
-    hs_json(true,'',['router_id'=>(int)$router['id'],'router_name'=>(string)$router['name'],'active_total'=>count($items),'download_bps'=>$downloadTotal,'upload_bps'=>$uploadTotal,'traffic'=>$items,'history'=>$history]);
-} catch (Throwable $e) {
-    hs_json(false, $e->getMessage(), [], 500);
-}
+ini_set('display_errors','0');header('Content-Type: application/json; charset=utf-8');
+function hs_json(bool $success,string $message='',array $data=[],int $code=200):void{http_response_code($code);echo json_encode(array_merge(['success'=>$success,'message'=>$message,'status'=>$success?'online':'offline'],$data),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;}
+function hs_tables(PDO $pdo):void{
+$pdo->exec("CREATE TABLE IF NOT EXISTS hotspot_bandwidth_state(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,router_id INT NULL,username VARCHAR(100) NOT NULL,session_id VARCHAR(120) NOT NULL DEFAULT '',interface_name VARCHAR(150) NOT NULL DEFAULT '',address VARCHAR(64) NOT NULL DEFAULT '',bytes_in BIGINT UNSIGNED NOT NULL DEFAULT 0,bytes_out BIGINT UNSIGNED NOT NULL DEFAULT 0,sampled_at DATETIME NOT NULL,hits INT NOT NULL DEFAULT 0,UNIQUE KEY uq_hotspot_state(router_id,username,session_id),KEY idx_hotspot_state_time(sampled_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$pdo->exec("CREATE TABLE IF NOT EXISTS hotspot_traffic_history(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,router_id INT NULL,recorded_at DATETIME NOT NULL,download_bps DECIMAL(20,2) NOT NULL DEFAULT 0,upload_bps DECIMAL(20,2) NOT NULL DEFAULT 0,active_total INT NOT NULL DEFAULT 0,KEY idx_hotspot_history_router_time(router_id,recorded_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$pdo->exec("CREATE TABLE IF NOT EXISTS hotspot_traffic_user_history(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,router_id INT NULL,username VARCHAR(100) NOT NULL,session_id VARCHAR(120) NOT NULL DEFAULT '',recorded_at DATETIME NOT NULL,bytes_in BIGINT UNSIGNED NOT NULL DEFAULT 0,bytes_out BIGINT UNSIGNED NOT NULL DEFAULT 0,upload_bps DECIMAL(20,2) NOT NULL DEFAULT 0,download_bps DECIMAL(20,2) NOT NULL DEFAULT 0,address VARCHAR(64) NOT NULL DEFAULT '',interface_name VARCHAR(150) NOT NULL DEFAULT '',KEY idx_huh_router_user_time(router_id,username,recorded_at),KEY idx_huh_user_session_time(username,session_id,recorded_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");}
+function hs_key(array $r):string{$sid=trim((string)($r['session-id']??''));return $sid!==''?$sid:trim((string)($r['.id']??'').'|'.(string)($r['address']??'').'|'.(string)($r['user']??''));}
+try{
+$config=new MikroTikConfig();$router=$config->getRouter();if(!$router)hs_json(false,'Router aktif tidak ditemukan.',[],500);$pdo=(new Database())->connect();hs_tables($pdo);$api=new RouterosAPI();$api->debug=false;if(!$api->connect($router['ip_address'],$router['username'],$router['password'],$router['api_port']))hs_json(false,'Gagal terhubung ke MikroTik.',['router_id'=>(int)$router['id'],'router_name'=>(string)$router['name']],503);
+$raw=(array)$api->comm('/ip/hotspot/active/print');$now=new DateTimeImmutable('now',new DateTimeZone('Asia/Jakarta'));$nowSql=$now->format('Y-m-d H:i:s');$downloadTotal=0.0;$uploadTotal=0.0;$items=[];
+$sel=$pdo->prepare('SELECT bytes_in,bytes_out,sampled_at,hits FROM hotspot_bandwidth_state WHERE router_id <=> ? AND username=? AND session_id=? LIMIT 1');$ins=$pdo->prepare('INSERT INTO hotspot_bandwidth_state(router_id,username,session_id,interface_name,address,bytes_in,bytes_out,sampled_at,hits) VALUES(?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE interface_name=VALUES(interface_name),address=VALUES(address),bytes_in=VALUES(bytes_in),bytes_out=VALUES(bytes_out),sampled_at=VALUES(sampled_at),hits=VALUES(hits)');$uh=$pdo->prepare('INSERT INTO hotspot_traffic_user_history(router_id,username,session_id,recorded_at,bytes_in,bytes_out,upload_bps,download_bps,address,interface_name) VALUES(?,?,?,?,?,?,?,?,?,?)');
+foreach($raw as $r){if(!is_array($r))continue;$user=trim((string)($r['user']??''));if($user==='')continue;$sid=hs_key($r);$in=max(0,(int)($r['bytes-in']??0));$out=max(0,(int)($r['bytes-out']??0));$address=trim((string)($r['address']??''));$interface=trim((string)($r['interface']??''));$sel->execute([(int)$router['id'],$user,$sid]);$prev=$sel->fetch();$up=0.0;$down=0.0;$hits=0;if($prev){$pa=strtotime((string)$prev['sampled_at']);$dt=$pa?max(.5,time()-$pa):0;if($dt>0){$up=$in>=(int)$prev['bytes_in']?(($in-(int)$prev['bytes_in'])*8/$dt):0;$down=$out>=(int)$prev['bytes_out']?(($out-(int)$prev['bytes_out'])*8/$dt):0;}$hits=(int)$prev['hits']+1;}$ins->execute([(int)$router['id'],$user,$sid,$interface,$address,$in,$out,$nowSql,$hits]);$uh->execute([(int)$router['id'],$user,$sid,$nowSql,$in,$out,$up,$down,$address,$interface]);$downloadTotal+=$down;$uploadTotal+=$up;$items[]=['id'=>(string)($r['.id']??''),'user'=>$user,'address'=>$address,'mac_address'=>(string)($r['mac-address']??''),'uptime'=>(string)($r['uptime']??''),'session_id'=>(string)($r['session-id']??''),'bytes_in'=>(string)$in,'bytes_out'=>(string)$out,'upload_bps'=>$up,'download_bps'=>$down,'total_bytes'=>(string)($in+$out)];}
+$hist=$pdo->prepare('INSERT INTO hotspot_traffic_history(router_id,recorded_at,download_bps,upload_bps,active_total) VALUES(?,?,?,?,?)');$hist->execute([(int)$router['id'],$nowSql,$downloadTotal,$uploadTotal,count($items)]);$pdo->prepare('DELETE FROM hotspot_traffic_history WHERE recorded_at<DATE_SUB(NOW(),INTERVAL 30 DAY)')->execute();$pdo->prepare('DELETE FROM hotspot_traffic_user_history WHERE recorded_at<DATE_SUB(NOW(),INTERVAL 30 DAY)')->execute();$pdo->prepare('DELETE FROM hotspot_bandwidth_state WHERE sampled_at<DATE_SUB(NOW(),INTERVAL 10 MINUTE)')->execute();
+$h=$pdo->prepare("SELECT DATE_FORMAT(recorded_at,'%H:%i:%s') label,download_bps,upload_bps,active_total FROM hotspot_traffic_history WHERE router_id=? AND recorded_at>=DATE_SUB(NOW(),INTERVAL 1 HOUR) ORDER BY recorded_at ASC LIMIT 360");$h->execute([(int)$router['id']]);$history=$h->fetchAll();$api->disconnect();hs_json(true,'',['router_id'=>(int)$router['id'],'router_name'=>(string)$router['name'],'active_total'=>count($items),'download_bps'=>$downloadTotal,'upload_bps'=>$uploadTotal,'traffic'=>$items,'history'=>$history]);
+}catch(Throwable $e){hs_json(false,$e->getMessage(),[],500);}
