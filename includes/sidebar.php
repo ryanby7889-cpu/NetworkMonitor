@@ -22,7 +22,7 @@ $pppoeView = $pppoeView ?? '';
             <a href="../pppoe/active.php" class="<?= $pppoeView === 'active' ? 'active' : '' ?>"><i class="bi bi-broadcast-pin"></i><span>Active Session</span></a>
             <a href="../pppoe/profiles.php" class="<?= $pppoeView === 'profiles' ? 'active' : '' ?>"><i class="bi bi-diagram-3"></i><span>Profile</span></a>
             <a href="../pppoe/traffic.php" class="<?= $pppoeView === 'traffic' ? 'active' : '' ?>"><i class="bi bi-speedometer2"></i><span>Traffic Ranking</span></a>
-            <a href="../pppoe/history.php" class="<?= $pppoeView === 'history' ? 'active' : '' ?>"><i class="bi bi-clock-history"></i><span>Traffic History</span></a>
+            <a href="../pppoe/history_index.php" class="<?= $pppoeView === 'history' ? 'active' : '' ?>"><i class="bi bi-clock-history"></i><span>Traffic History</span></a>
         </div>
     </div>
     <div class="hotspot-menu <?= $activeMenu === 'hotspot' ? 'open' : '' ?>">
