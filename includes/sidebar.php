@@ -43,12 +43,12 @@ $billingView = $billingView ?? '';
         </div>
     </div>
     <div class="billing-menu <?= $activeMenu === 'billing' ? 'open' : '' ?>">
-        <a href="../billing/index.php" class="menu-item billing-parent <?= $activeMenu === 'billing' ? 'active' : '' ?>" title="Billing"><i class="bi bi-receipt"></i><span>Billing</span><i class="bi bi-chevron-down billing-chevron"></i></a>
+        <a href="../billing-dashboard/index.php" class="menu-item billing-parent <?= $activeMenu === 'billing' ? 'active' : '' ?>" title="Billing"><i class="bi bi-receipt"></i><span>Billing</span><i class="bi bi-chevron-down billing-chevron"></i></a>
         <div class="billing-submenu">
             <a href="../billing-dashboard/index.php" class="<?= $billingView === 'dashboard' ? 'active' : '' ?>"><i class="bi bi-grid-1x2"></i><span>Dashboard Billing</span></a>
             <a href="../billing/index.php#customerSection" class="<?= $billingView === 'customers' ? 'active' : '' ?>"><i class="bi bi-people"></i><span>Pelanggan</span></a>
             <a href="../billing/index.php#invoiceSection" class="<?= $billingView === 'invoices' ? 'active' : '' ?>"><i class="bi bi-receipt-cutoff"></i><span>Tagihan / Invoice</span></a>
-            <a href="../billing/index.php#paymentSection" class="<?= $billingView === 'payments' ? 'active' : '' ?>"><i class="bi bi-credit-card"></i><span>Pembayaran</span></a>
+            <a href="../billing/payments.php" class="<?= $billingView === 'payments' ? 'active' : '' ?>"><i class="bi bi-credit-card"></i><span>Pembayaran</span></a>
             <a href="../billing/invoice.php" class="<?= $billingView === 'invoice_print' ? 'active' : '' ?>"><i class="bi bi-file-earmark-pdf"></i><span>Cetak Invoice</span></a>
             <a href="../billing/receipt.php" class="<?= $billingView === 'receipt' ? 'active' : '' ?>"><i class="bi bi-file-earmark-check"></i><span>Kwitansi</span></a>
             <a href="../billing/suspend_log.php" class="<?= $billingView === 'suspend_log' ? 'active' : '' ?>"><i class="bi bi-person-x"></i><span>Log Suspend</span></a>
