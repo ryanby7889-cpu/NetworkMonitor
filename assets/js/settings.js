@@ -1,13 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
   const layout = document.querySelector('.settings-layout');
-  if (!layout) return;
+  const nav = layout?.querySelector('.settings-nav');
+  const section = layout?.querySelector(':scope > section');
+  if (!layout || !nav || !section) return;
 
-  const nav = layout.querySelector('.settings-nav');
-  const section = layout.querySelector('.settings-content');
-  if (!nav || !section) return;
+  // The Alarm/System/Billing panes may be nested by older/minified markup.
+  // Normalize every pane to a direct child of the settings content section.
+  [...section.querySelectorAll('.settings-pane')].forEach(pane => {
+    if (pane.parentElement !== section) section.appendChild(pane);
+  });
 
   const tabs = [...nav.querySelectorAll('[data-settings-tab]')];
-  const panes = [...section.querySelectorAll('[data-settings-pane]')];
+  const panes = [...section.querySelectorAll(':scope > .settings-pane')];
   const valid = ['general', 'mikrotik', 'alarm', 'system', 'billing'];
 
   function activate(target, writeHash = true) {
