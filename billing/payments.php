@@ -1,4 +1,84 @@
 <?php
-$pageTitle='Pembayaran Billing';$activeMenu='billing';$billingView='payments';$boot=[];
-try{require_once '../Config/database.php';$pdo=(new Database())->connect();$pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);$pdo->exec("SET time_zone='+07:00'");$st=$pdo->query("SELECT i.id,i.invoice_no,i.period,i.amount,i.due_date,i.status,i.paid_at,i.payment_method,i.notes,c.name customer_name,c.pppoe_username,CASE WHEN i.status='unpaid' THEN GREATEST(DATEDIFF(CURDATE(),i.due_date),0) ELSE 0 END days_overdue FROM billing_invoices i JOIN billing_customers c ON c.id=i.customer_id ORDER BY CASE WHEN i.status='unpaid' AND i.due_date<CURDATE() THEN 0 WHEN i.status='unpaid' THEN 1 ELSE 2 END,i.due_date ASC,i.id DESC LIMIT 500");$boot=$st->fetchAll(PDO::FETCH_ASSOC);}catch(Throwable $e){$boot=[];}
-?><!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pembayaran Billing - NetMonitor</title><link rel="stylesheet" href="../assets/css/variables.css?v=12"><link rel="stylesheet" href="../assets/css/common.css?v=12"><link rel="stylesheet" href="../assets/css/theme.css?v=1"><link rel="stylesheet" href="../assets/css/billing_payments.css?v=5"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><style>.bp-modal[hidden]{display:none!important}.bp-modal:not([hidden]){display:grid!important;pointer-events:auto!important}.bp-dialog{position:relative;z-index:5001;pointer-events:auto!important}.bp-dialog *{pointer-events:auto!important}.bp-dialog button,.bp-dialog select,.bp-dialog input,.bp-dialog textarea{position:relative;z-index:5002;pointer-events:auto!important}</style></head><body><?php require_once '../includes/sidebar.php';?><div class="main"><main class="bp-page"><header class="bp-header"><div><h1>Pembayaran Billing</h1><p>Catat pembayaran invoice, lihat collection, dan cetak kwitansi.</p></div><div class="bp-actions"><a class="bp-btn secondary" href="../billing-dashboard/">Dashboard Billing</a><button id="refreshBtn" class="bp-btn secondary" type="button"><i class="bi bi-arrow-clockwise"></i> Refresh</button></div></header><div id="notice" class="bp-notice" hidden></div><section class="bp-kpis"><div><span>Hari Ini</span><strong id="today">Rp 0</strong><small id="todayCount">0 pembayaran</small></div><div><span>Minggu Ini</span><strong id="week">Rp 0</strong><small id="weekCount">0 pembayaran</small></div><div><span>Bulan Ini</span><strong id="month">Rp 0</strong><small id="monthCount">0 pembayaran</small></div><div><span>Invoice Ditampilkan</span><strong id="shown">0</strong><small>maks. 500</small></div></section><section class="bp-card"><div class="bp-filter"><input id="search" placeholder="Cari invoice, pelanggan, PPPoE, metode..."><select id="status"><option value="all">Semua Status</option><option value="unpaid">Belum Bayar</option><option value="overdue">Terlambat</option><option value="paid">Lunas</option><option value="cancelled">Dibatalkan</option></select><input id="period" type="month"><button id="clearBtn" class="bp-btn secondary" type="button">Reset</button></div><div class="bp-table-wrap"><table><thead><tr><th>Invoice</th><th>Pelanggan</th><th>Periode</th><th>Jatuh Tempo</th><th>Jumlah</th><th>Status</th><th>Pembayaran</th><th>Aksi</th></tr></thead><tbody id="rows"><tr><td colspan="8">Memuat data...</td></tr></tbody></table></div></section><div class="bp-foot">Pembayaran hanya mengubah status invoice menjadi <b>paid</b> dan mencatat <b>paid_at</b>/<b>payment_method</b>. Tidak ada suspend otomatis.</div></main></div><div id="payModal" class="bp-modal" hidden><div class="bp-dialog" role="dialog" aria-modal="true"><div class="bp-dialog-head"><div><h2>Catat Pembayaran</h2><p id="modalInvoice">-</p></div><button id="closeModal" type="button" aria-label="Tutup">×</button></div><div class="bp-form"><label>Metode<select id="payMethod"><option>Cash</option><option>Transfer</option><option>QRIS</option><option>E-Wallet</option><option>VA</option><option>Lainnya</option></select></label><label>Tanggal & Waktu<input id="payAt" type="datetime-local"></label><label>Catatan<textarea id="payNotes" rows="3" placeholder="Opsional"></textarea></label></div><div class="bp-dialog-actions"><button id="cancelPay" class="bp-btn secondary" type="button">Batal</button><button id="confirmPay" class="bp-btn primary" type="button">Simpan Pembayaran</button></div></div></div><script>window.PAYMENT_BOOTSTRAP=<?=json_encode($boot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;</script><script src="../assets/js/billing_payments.js?v=5"></script><script src="../assets/js/app.js?v=1"></script></body></html>
+$pageTitle='Pembayaran Billing';
+$activeMenu='billing';
+$billingView='payments';
+$boot=[];
+$collection=['today'=>0,'today_count'=>0,'week'=>0,'week_count'=>0,'month'=>0,'month_count'=>0];
+$errorMessage='';
+
+try {
+    require_once '../Config/database.php';
+    $pdo=(new Database())->connect();
+    $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
+    $pdo->exec("SET time_zone='+07:00'");
+
+    $st=$pdo->query("SELECT i.id,i.invoice_no,i.period,i.amount,i.due_date,i.status,i.paid_at,i.payment_method,i.notes,c.name customer_name,c.pppoe_username,
+        CASE WHEN i.status='unpaid' THEN GREATEST(DATEDIFF(CURDATE(),i.due_date),0) ELSE 0 END days_overdue
+        FROM billing_invoices i
+        JOIN billing_customers c ON c.id=i.customer_id
+        ORDER BY CASE WHEN i.status='unpaid' AND i.due_date<CURDATE() THEN 0 WHEN i.status='unpaid' THEN 1 ELSE 2 END,i.due_date ASC,i.id DESC
+        LIMIT 500");
+    $boot=$st->fetchAll(PDO::FETCH_ASSOC);
+
+    $q=$pdo->query("SELECT COUNT(*) cnt,COALESCE(SUM(amount),0) amount FROM billing_invoices WHERE status='paid' AND paid_at>=CURDATE()")->fetch(PDO::FETCH_ASSOC)?:[];
+    $collection['today']=(float)($q['amount']??0); $collection['today_count']=(int)($q['cnt']??0);
+    $q=$pdo->query("SELECT COUNT(*) cnt,COALESCE(SUM(amount),0) amount FROM billing_invoices WHERE status='paid' AND paid_at>=DATE_SUB(CURDATE(),INTERVAL WEEKDAY(CURDATE()) DAY)")->fetch(PDO::FETCH_ASSOC)?:[];
+    $collection['week']=(float)($q['amount']??0); $collection['week_count']=(int)($q['cnt']??0);
+    $q=$pdo->query("SELECT COUNT(*) cnt,COALESCE(SUM(amount),0) amount FROM billing_invoices WHERE status='paid' AND paid_at>=DATE_FORMAT(CURDATE(),'%Y-%m-01') AND paid_at<DATE_ADD(LAST_DAY(CURDATE()),INTERVAL 1 DAY)")->fetch(PDO::FETCH_ASSOC)?:[];
+    $collection['month']=(float)($q['amount']??0); $collection['month_count']=(int)($q['cnt']??0);
+} catch(Throwable $e) {
+    $errorMessage=$e->getMessage();
+}
+
+function bp_h($v): string { return htmlspecialchars((string)($v??''), ENT_QUOTES, 'UTF-8'); }
+function bp_money($v): string { return 'Rp '.number_format((float)$v,0,',','.'); }
+function bp_status(array $x): string {
+    if (($x['status']??'')==='paid') return '<span class="badge paid">LUNAS</span>';
+    if (($x['status']??'')==='cancelled') return '<span class="badge cancelled">DIBATALKAN</span>';
+    $days=(int)($x['days_overdue']??0);
+    return $days>0 ? '<span class="badge overdue">TERLAMBAT '.$days.' HARI</span>' : '<span class="badge unpaid">BELUM BAYAR</span>';
+}
+function bp_actions(array $x): string {
+    if (($x['status']??'')==='unpaid') return '<button type="button" class="mini pay" data-pay="'.bp_h($x['id']).'">Catat Bayar</button>';
+    if (($x['status']??'')==='paid') return '<button type="button" class="mini undo" data-unpay="'.bp_h($x['id']).'">Batalkan Lunas</button><a class="mini" target="_blank" href="../billing/receipt.php?id='.rawurlencode((string)$x['id']).'">Kwitansi</a>';
+    return '-';
+}
+?>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pembayaran Billing - NetMonitor</title>
+<link rel="stylesheet" href="../assets/css/variables.css?v=12">
+<link rel="stylesheet" href="../assets/css/common.css?v=12">
+<link rel="stylesheet" href="../assets/css/theme.css?v=1">
+<link rel="stylesheet" href="../assets/css/billing_payments.css?v=6">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>.bp-modal[hidden]{display:none!important}.bp-modal:not([hidden]){display:grid!important;pointer-events:auto!important}.bp-dialog{position:relative;z-index:5001;pointer-events:auto!important}.bp-dialog *{pointer-events:auto!important}.bp-dialog button,.bp-dialog select,.bp-dialog input,.bp-dialog textarea{position:relative;z-index:5002;pointer-events:auto!important}</style>
+</head>
+<body>
+<?php require_once '../includes/sidebar.php'; ?>
+<div class="main"><main class="bp-page">
+<header class="bp-header"><div><h1>Pembayaran Billing</h1><p>Catat pembayaran invoice, lihat collection, dan cetak kwitansi.</p></div><div class="bp-actions"><a class="bp-btn secondary" href="../billing-dashboard/">Dashboard Billing</a><button id="refreshBtn" class="bp-btn secondary" type="button"><i class="bi bi-arrow-clockwise"></i> Refresh</button></div></header>
+<div id="notice" class="bp-notice" <?= $errorMessage===''?'hidden':'' ?>><?=bp_h($errorMessage) ?></div>
+<section class="bp-kpis">
+<div><span>Hari Ini</span><strong id="today"><?=bp_money($collection['today'])?></strong><small id="todayCount"><?=number_format($collection['today_count'],0,',','.')?> pembayaran</small></div>
+<div><span>Minggu Ini</span><strong id="week"><?=bp_money($collection['week'])?></strong><small id="weekCount"><?=number_format($collection['week_count'],0,',','.')?> pembayaran</small></div>
+<div><span>Bulan Ini</span><strong id="month"><?=bp_money($collection['month'])?></strong><small id="monthCount"><?=number_format($collection['month_count'],0,',','.')?> pembayaran</small></div>
+<div><span>Invoice Ditampilkan</span><strong id="shown"><?=number_format(count($boot),0,',','.')?></strong><small>maks. 500</small></div>
+</section>
+<section class="bp-card">
+<div class="bp-filter"><input id="search" placeholder="Cari invoice, pelanggan, PPPoE, metode..."><select id="status"><option value="all">Semua Status</option><option value="unpaid">Belum Bayar</option><option value="overdue">Terlambat</option><option value="paid">Lunas</option><option value="cancelled">Dibatalkan</option></select><input id="period" type="month"><button id="clearBtn" class="bp-btn secondary" type="button">Reset</button></div>
+<div class="bp-table-wrap"><table><thead><tr><th>Invoice</th><th>Pelanggan</th><th>Periode</th><th>Jatuh Tempo</th><th>Jumlah</th><th>Status</th><th>Pembayaran</th><th>Aksi</th></tr></thead><tbody id="rows">
+<?php if (!$boot): ?><tr><td colspan="8" class="empty"><?= $errorMessage!=='' ? 'Gagal memuat data: '.bp_h($errorMessage) : 'Tidak ada invoice.' ?></td></tr>
+<?php else: foreach($boot as $x): $overdue=$x['status']==='unpaid' && (int)$x['days_overdue']>0; ?>
+<tr><td><b><?=bp_h($x['invoice_no'])?></b></td><td><b><?=bp_h($x['customer_name'])?></b><br><small><?=bp_h($x['pppoe_username'])?></small></td><td><?=bp_h($x['period'])?></td><td><?=bp_h($x['due_date'])?><?= $overdue?'<br><small>terlambat '.(int)$x['days_overdue'].' hari</small>':'' ?></td><td class="amount"><?=bp_money($x['amount'])?></td><td><?=bp_status($x)?></td><td><?= $x['paid_at'] ? bp_h($x['paid_at']).'<br><small>'.bp_h($x['payment_method']?:'Cash').'</small>' : '-' ?></td><td><div class="row-actions"><?=bp_actions($x)?></div></td></tr>
+<?php endforeach; endif; ?>
+</tbody></table></div></section>
+<div class="bp-foot">Pembayaran hanya mengubah status invoice menjadi <b>paid</b> dan mencatat <b>paid_at</b>/<b>payment_method</b>. Tidak ada suspend otomatis.</div>
+</main></div>
+<div id="payModal" class="bp-modal" hidden><div class="bp-dialog" role="dialog" aria-modal="true"><div class="bp-dialog-head"><div><h2>Catat Pembayaran</h2><p id="modalInvoice">-</p></div><button id="closeModal" type="button" aria-label="Tutup">×</button></div><div class="bp-form"><label>Metode<select id="payMethod"><option>Cash</option><option>Transfer</option><option>QRIS</option><option>E-Wallet</option><option>VA</option><option>Lainnya</option></select></label><label>Tanggal & Waktu<input id="payAt" type="datetime-local"></label><label>Catatan<textarea id="payNotes" rows="3" placeholder="Opsional"></textarea></label></div><div class="bp-dialog-actions"><button id="cancelPay" class="bp-btn secondary" type="button">Batal</button><button id="confirmPay" class="bp-btn primary" type="button">Simpan Pembayaran</button></div></div></div>
+<script>window.PAYMENT_BOOTSTRAP=<?=json_encode($boot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;</script>
+<script src="../assets/js/billing_payments.js?v=6"></script>
+<script src="../assets/js/app.js?v=1"></script>
+</body></html>
