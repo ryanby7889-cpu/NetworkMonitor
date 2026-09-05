@@ -1,11 +1,6 @@
 <?php
-$pageTitle = 'Alarm';
-$activeMenu = 'alarm';
-$pageCss = ['../assets/css/alarm.css'];
-?>
-<?php
-require_once __DIR__ . "/../Config/database.php";
-require_once __DIR__ . "/../Config/alarm.php";
+require_once __DIR__ . '/../Config/database.php';
+require_once __DIR__ . '/../Config/alarm.php';
 
 class AlarmEngine
 {
@@ -36,7 +31,7 @@ class AlarmEngine
         }
     }
 
-    /** PPPoE: Download = router TX -> pelanggan, Upload = pelanggan RX -> router. */
+    /** PPPoE alarm thresholds remain percentages; Ether1 thresholds are absolute Mbps. */
     public function checkPppoeBandwidth($routerId, $interface, $username, $downloadMbps, $uploadMbps, $downloadLimitMbps, $uploadLimitMbps = 0, $downloadWarningPercent = null, $downloadCriticalPercent = null, $uploadWarningPercent = null, $uploadCriticalPercent = null)
     {
         $interface = trim((string)$interface) !== '' ? trim((string)$interface) : 'pppoe-' . $username;
@@ -44,12 +39,11 @@ class AlarmEngine
         $ul = (float)$uploadMbps;
         $dlim = (float)$downloadLimitMbps;
         $ulim = (float)$uploadLimitMbps;
-        $dw = $downloadWarningPercent === null ? AlarmConfig::downloadWarning() : (float)$downloadWarningPercent;
-        $dc = $downloadCriticalPercent === null ? AlarmConfig::downloadCritical() : (float)$downloadCriticalPercent;
-        $uw = $uploadWarningPercent === null ? AlarmConfig::uploadWarning() : (float)$uploadWarningPercent;
-        $uc = $uploadCriticalPercent === null ? AlarmConfig::uploadCritical() : (float)$uploadCriticalPercent;
+        $dw = $downloadWarningPercent === null ? 80 : (float)$downloadWarningPercent;
+        $dc = $downloadCriticalPercent === null ? 90 : (float)$downloadCriticalPercent;
+        $uw = $uploadWarningPercent === null ? 20 : (float)$uploadWarningPercent;
+        $uc = $uploadCriticalPercent === null ? 30 : (float)$uploadCriticalPercent;
 
-        /* Convert old single-type PPPoE alarms to resolved history records. */
         $legacy = $this->pdo->prepare("UPDATE alarms SET status='resolved',resolved_at=NOW() WHERE router_id=:router_id AND interface_name=:interface AND alarm_type='pppoe_bandwidth' AND status='active'");
         $legacy->execute([':router_id' => $routerId, ':interface' => $interface]);
 
@@ -57,7 +51,6 @@ class AlarmEngine
         $this->checkPppoeDirection($routerId, $interface, $username, 'upload', $ul, $ulim, $uw, $uc);
     }
 
-    /** Resolve directional PPPoE alarms for sessions that disappeared from the live router list. */
     public function reconcilePppoeActive($routerId, array $activeInterfaces)
     {
         $normalized = [];
