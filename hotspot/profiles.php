@@ -1,0 +1,1 @@
+<?php $hotspotView='profiles'; require __DIR__.'/index.php';
