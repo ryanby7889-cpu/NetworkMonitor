@@ -9,8 +9,10 @@ try{
  $routerId=(int)($input['router_id']??0);
  $routerName=trim((string)($input['router_name']??'Router'));
  $events=$input['events']??[];
- if($routerId<=0||!is_array($events)||!$events){echo json_encode(['success'=>true,'sent'=>0,'skipped'=>0]);exit;}
- $pdo->exec("CREATE TABLE IF NOT EXISTS pppoe_disconnect_history (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, router_id INT NOT NULL, router_name VARCHAR(128) NULL, username VARCHAR(128) NOT NULL, address VARCHAR(64) NULL, profile VARCHAR(128) NULL, caller_id VARCHAR(128) NULL, uptime VARCHAR(64) NULL, disconnected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(id), KEY idx_router_time(router_id,disconnected_at), KEY idx_user_time(username,disconnected_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+ if($routerId<=0||!is_array($events)||!$events){echo json_encode(['success'=>true,'sent'=>0,'skipped'=>0,'logged'=>0]);exit;}
+ $pdo->exec("CREATE TABLE IF NOT EXISTS pppoe_disconnect_history (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, event_key CHAR(64) NULL, router_id INT NOT NULL, router_name VARCHAR(128) NULL, username VARCHAR(128) NOT NULL, address VARCHAR(64) NULL, profile VARCHAR(128) NULL, caller_id VARCHAR(128) NULL, uptime VARCHAR(64) NULL, disconnected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(id), UNIQUE KEY uq_event_key(event_key), KEY idx_router_time(router_id,disconnected_at), KEY idx_user_time(username,disconnected_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+ try{$pdo->exec("ALTER TABLE pppoe_disconnect_history ADD COLUMN IF NOT EXISTS event_key CHAR(64) NULL");}catch(Throwable $ignore){}
+ try{$pdo->exec("ALTER TABLE pppoe_disconnect_history ADD UNIQUE KEY uq_event_key(event_key)");}catch(Throwable $ignore){}
  $q=$pdo->query("SELECT setting_name,setting_value FROM settings WHERE setting_name IN ('telegram_enabled','telegram_bot_token','telegram_chat_id')");
  $cfg=$q->fetchAll(PDO::FETCH_KEY_PAIR);
  $enabled=($cfg['telegram_enabled']??'0')==='1';
@@ -19,8 +21,8 @@ try{
  $pdo->exec("CREATE TABLE IF NOT EXISTS telegram_pppoe_disconnect_log (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, event_key CHAR(64) NOT NULL, router_id INT NOT NULL, username VARCHAR(128) NOT NULL, session_id VARCHAR(128) NULL, notified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(id), UNIQUE KEY uq_event(event_key), KEY idx_router_user(router_id,username,notified_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
  $reserve=$pdo->prepare('INSERT IGNORE INTO telegram_pppoe_disconnect_log(event_key,router_id,username,session_id) VALUES(?,?,?,?)');
  $remove=$pdo->prepare('DELETE FROM telegram_pppoe_disconnect_log WHERE event_key=?');
- $history=$pdo->prepare('INSERT INTO pppoe_disconnect_history(router_id,router_name,username,address,profile,caller_id,uptime,disconnected_at) VALUES(?,?,?,?,?,?,?,NOW())');
- $sent=0;$skipped=0;$logged=0;$errors=[];
+ $history=$pdo->prepare('INSERT IGNORE INTO pppoe_disconnect_history(event_key,router_id,router_name,username,address,profile,caller_id,uptime,disconnected_at) VALUES(?,?,?,?,?,?,?,?,NOW())');
+ $sent=0;$skipped=0;$logged=0;$duplicates=0;$errors=[];
  foreach(array_slice($events,0,50) as $e){
   if(!is_array($e))continue;
   $username=trim((string)($e['name']??''));if($username==='')continue;
@@ -29,9 +31,11 @@ try{
   $profile=trim((string)($e['profile']??'-'));
   $caller=trim((string)($e['caller_id']??'-'));
   $uptime=trim((string)($e['uptime']??'-'));
-  $history->execute([$routerId,$routerName,$username,$address,$profile,$caller,$uptime]);$logged++;
-  if(!$enabled||$token===''||$chat==='')continue;
   $eventKey=hash('sha256',$routerId.'|'.$username.'|'.$session.'|'.$address.'|'.$caller.'|'.$uptime);
+  $history->execute([$eventKey,$routerId,$routerName,$username,$address,$profile,$caller,$uptime]);
+  if($history->rowCount()===0){$duplicates++;continue;}
+  $logged++;
+  if(!$enabled||$token===''||$chat==='')continue;
   $reserve->execute([$eventKey,$routerId,$username,$session!==''&&$session!=='-'?$session:null]);
   if($reserve->rowCount()===0){$skipped++;continue;}
   $time=date('d-m-Y H:i:s');
@@ -44,5 +48,5 @@ try{
   if($body===false||$code<200||$code>=300||empty($res['ok'])){$remove->execute([$eventKey]);$errors[]=$username.': '.($err!==''?$err:'Telegram menolak pesan');continue;}
   $sent++;
  }
- echo json_encode(['success'=>true,'sent'=>$sent,'skipped'=>$skipped,'logged'=>$logged,'errors'=>$errors],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+ echo json_encode(['success'=>true,'sent'=>$sent,'skipped'=>$skipped,'logged'=>$logged,'duplicates'=>$duplicates,'errors'=>$errors],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 }catch(Throwable $e){http_response_code(400);echo json_encode(['success'=>false,'message'=>$e->getMessage()],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);}
