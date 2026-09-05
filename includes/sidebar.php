@@ -37,7 +37,7 @@ $pppoeView = $pppoeView ?? '';
             <a href="../hotspot/customers.php" class="<?= $hotspotView === 'customers' ? 'active' : '' ?>"><i class="bi bi-person-vcard"></i><span>Pelanggan</span></a>
             <a href="../hotspot/active.php" class="<?= $hotspotView === 'active' ? 'active' : '' ?>"><i class="bi bi-broadcast-pin"></i><span>Active Session</span></a>
             <a href="../hotspot/profiles.php" class="<?= $hotspotView === 'profiles' ? 'active' : '' ?>"><i class="bi bi-diagram-3"></i><span>Profile</span></a>
-            <a href="../hotspot/traffic.php" class="<?= $hotspotView === 'traffic' ? 'active' : '' ?>"><i class="bi bi-speedometer"></i><span>Live Traffic</span></a>
+            <a href="../hotspot/traffic.php" class="menu-item <?= $hotspotView === 'traffic' ? 'active' : '' ?>"><i class="bi bi-speedometer"></i><span>Live Traffic</span></a>
         </div>
     </div>
     <a href="../billing/index.php" class="menu-item <?= $activeMenu === 'billing' ? 'active' : '' ?>" title="Billing"><i class="bi bi-receipt"></i><span>Billing</span></a>
@@ -49,4 +49,4 @@ window.HOTSPOT_VIEW=<?= json_encode($hotspotView,JSON_UNESCAPED_UNICODE|JSON_UNE
 window.PPPOE_VIEW=<?= json_encode($pppoeView,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
 document.addEventListener("DOMContentLoaded",function(){const s=document.getElementById("netSidebar"),t=document.getElementById("sidebarToggle");if(!s||!t)return;const k="netmonitor_sidebar";function set(c){s.classList.toggle("collapsed",c);t.setAttribute("aria-expanded",c?"false":"true");localStorage.setItem(k,c?"collapsed":"expanded")}if(localStorage.getItem(k)==="collapsed"){s.classList.add("collapsed");t.setAttribute("aria-expanded","false")}t.addEventListener("click",()=>set(!s.classList.contains("collapsed")));s.querySelectorAll(".hotspot-parent,.pppoe-parent").forEach(p=>p.addEventListener("click",e=>{if(s.classList.contains("collapsed")){e.preventDefault();set(false)}}));});
 </script>
-<script src="../assets/js/alarm_notification.js?v=1"></script><script src="../assets/js/dashboard_pro4.js?v=4"></script><script src="../assets/js/hotspot_subpage.js?v=1"></script><script src="../assets/js/app.js?v=6"></script><script src="../assets/js/telegram_settings.js?v=1"></script><script src="../assets/js/pppoe_disconnect_monitor.js?v=2"></script>
+<script src="../assets/js/alarm_notification.js?v=1"></script><script src="../assets/js/dashboard_pro4.js?v=4"></script><script src="../assets/js/hotspot_subpage.js?v=1"></script><script src="../assets/js/app.js?v=6"></script><script src="../assets/js/telegram_settings.js?v=1"></script><script src="../assets/js/pppoe_disconnect_monitor.js?v=3"></script>
