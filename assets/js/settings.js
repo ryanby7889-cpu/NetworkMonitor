@@ -4,8 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const section = layout?.querySelector(':scope > section');
   if (!layout || !nav || !section) return;
 
-  // The Alarm/System/Billing panes may be nested by older/minified markup.
-  // Normalize every pane to a direct child of the settings content section.
+  // Normalize panes that were nested by the older compact Settings markup.
   [...section.querySelectorAll('.settings-pane')].forEach(pane => {
     if (pane.parentElement !== section) section.appendChild(pane);
   });
@@ -23,6 +22,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   tabs.forEach(tab => tab.addEventListener('click', () => activate(tab.dataset.settingsTab)));
   activate((location.hash || '').replace('#', ''), false);
+
+  // Alarm Settings = absolute Ether1 traffic thresholds in Mbps.
+  const alarmPane = section.querySelector('[data-settings-pane="alarm"]');
+  if (alarmPane) {
+    const heading = alarmPane.querySelector('h5');
+    if (heading) heading.innerHTML = '<i class="bi bi-bell me-2"></i>Ether1 Traffic Alarm Threshold';
+    const desc = alarmPane.querySelector('.text-secondary.small');
+    if (desc) desc.textContent = 'Atur ambang batas traffic interface ether1. Nilai dibandingkan langsung dengan traffic Mbps saat monitoring.';
+    alarmPane.querySelectorAll('.form-label').forEach(label => {
+      const text = label.textContent.trim();
+      if (text.includes('Download Warning')) label.textContent = 'Ether1 Download Warning (Mbps)';
+      if (text.includes('Download Critical')) label.textContent = 'Ether1 Download Critical (Mbps)';
+      if (text.includes('Upload Warning')) label.textContent = 'Ether1 Upload Warning (Mbps)';
+      if (text.includes('Upload Critical')) label.textContent = 'Ether1 Upload Critical (Mbps)';
+    });
+    alarmPane.querySelectorAll('input[type="number"]').forEach(input => {
+      input.min = '0';
+      input.max = '100000';
+      input.step = '0.01';
+    });
+  }
 
   document.querySelectorAll('.test-router-connection').forEach(test => {
     test.addEventListener('click', async () => {
