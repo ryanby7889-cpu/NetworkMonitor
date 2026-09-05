@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const section = layout?.querySelector(':scope > section');
   if (!layout || !nav || !section) return;
 
-  // Normalize panes that were nested by the older compact Settings markup.
   [...section.querySelectorAll('.settings-pane')].forEach(pane => {
     if (pane.parentElement !== section) section.appendChild(pane);
   });
@@ -38,9 +37,36 @@ document.addEventListener('DOMContentLoaded', () => {
       if (text.includes('Upload Critical')) label.textContent = 'Ether1 Upload Critical (Mbps)';
     });
     alarmPane.querySelectorAll('input[type="number"]').forEach(input => {
-      input.min = '0';
-      input.max = '100000';
-      input.step = '0.01';
+      input.min = '0'; input.max = '100000'; input.step = '0.01';
+    });
+
+    // Save only the four alarm thresholds so General settings are never reset.
+    const form = alarmPane.querySelector('form');
+    if (form) form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = form.querySelector('button[type="submit"], button:not([type])');
+      const oldHtml = button?.innerHTML;
+      if (button) { button.disabled = true; button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan...'; }
+      try {
+        const response = await fetch('../api/alarm_settings.php', { method: 'POST', body: new FormData(form), cache: 'no-store' });
+        const data = await response.json();
+        const old = alarmPane.querySelector('.alarm-save-result');
+        if (old) old.remove();
+        const result = document.createElement('div');
+        result.className = 'alert alert-' + (data.success ? 'success' : 'danger') + ' mt-3 alarm-save-result';
+        result.innerHTML = '<i class="bi ' + (data.success ? 'bi-check-circle' : 'bi-exclamation-triangle') + ' me-2"></i>' + String(data.message || 'Gagal menyimpan threshold.');
+        form.appendChild(result);
+        if (data.success) window.dispatchEvent(new CustomEvent('alarm:thresholds-updated', { detail: data }));
+      } catch (error) {
+        const old = alarmPane.querySelector('.alarm-save-result');
+        if (old) old.remove();
+        const result = document.createElement('div');
+        result.className = 'alert alert-danger mt-3 alarm-save-result';
+        result.textContent = 'Gagal menyimpan threshold: ' + error.message;
+        form.appendChild(result);
+      } finally {
+        if (button) { button.disabled = false; button.innerHTML = oldHtml; }
+      }
     });
   }
 
@@ -52,31 +78,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const old = test.innerHTML;
       test.disabled = true;
       test.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Tes...';
-      if (result) {
-        result.className = 'router-connection-result text-secondary';
-        result.textContent = 'Menghubungkan...';
-      }
+      if (result) { result.className = 'router-connection-result text-secondary'; result.textContent = 'Menghubungkan...'; }
       try {
         const response = await fetch(`../api/settings_router.php?router_id=${encodeURIComponent(routerId)}`, { cache: 'no-store' });
         const data = await response.json();
         const ok = !!data.success;
-        if (result) {
-          result.className = 'router-connection-result ' + (ok ? 'text-success' : 'text-danger');
-          result.textContent = ok ? `ONLINE • ${data.identity || 'Terhubung'}` : (data.message || 'Koneksi gagal');
-        }
-        if (badge) {
-          badge.textContent = data.status || (ok ? 'ONLINE' : 'OFFLINE');
-          badge.className = 'status-badge ' + (ok ? 'online' : 'offline') + ' router-status-badge';
-        }
+        if (result) { result.className = 'router-connection-result ' + (ok ? 'text-success' : 'text-danger'); result.textContent = ok ? `ONLINE • ${data.identity || 'Terhubung'}` : (data.message || 'Koneksi gagal'); }
+        if (badge) { badge.textContent = data.status || (ok ? 'ONLINE' : 'OFFLINE'); badge.className = 'status-badge ' + (ok ? 'online' : 'offline') + ' router-status-badge'; }
       } catch (error) {
-        if (result) {
-          result.className = 'router-connection-result text-danger';
-          result.textContent = 'API error: ' + error.message;
-        }
-      } finally {
-        test.disabled = false;
-        test.innerHTML = old;
-      }
+        if (result) { result.className = 'router-connection-result text-danger'; result.textContent = 'API error: ' + error.message; }
+      } finally { test.disabled = false; test.innerHTML = old; }
     });
   });
 });
