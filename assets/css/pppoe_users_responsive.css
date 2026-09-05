@@ -1,0 +1,9 @@
+/* NetMonitor PPPoE User Accounts — page overflow fix */
+html,body{max-width:100%;overflow-x:hidden!important}
+body{min-width:0}
+main.main-content.pppoe-page.pppoe-users-page{box-sizing:border-box;min-width:0;width:auto;max-width:calc(100vw - var(--sidebar-open));overflow-x:hidden}
+.pppoe-users-page .pppoe-card{min-width:0;max-width:100%}
+.pppoe-users-page .table-responsive{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden}
+.pppoe-users-page .pppoe-table{width:100%;min-width:820px}
+@media(max-width:992px){main.main-content.pppoe-page.pppoe-users-page{max-width:calc(100vw - var(--sidebar-closed));}}
+@media(max-width:700px){.pppoe-users-page .pppoe-table{min-width:760px}}
