@@ -1,6 +1,9 @@
 <?php
+require_once __DIR__ . '/Config/auth.php';
 
-echo "<h1>Network Monitor</h1>";
-echo "<h3>Project Berhasil Dibuat</h3>";
-
-?>
+if (isLoggedIn()) {
+    header('Location: dashboard/index.php');
+} else {
+    header('Location: auth/login.php');
+}
+exit;
