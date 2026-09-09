@@ -15,8 +15,18 @@ const NETWORK_MONITOR_USERNAME = 'admin';
 const NETWORK_MONITOR_PASSWORD = 'admin123';
 const NETWORK_MONITOR_SESSION_TIMEOUT = 28800;
 
+function isLocalCollectorRequest(): bool
+{
+    if (PHP_SAPI === 'cli') return true;
+    $remote = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $uri = (string)($_SERVER['REQUEST_URI'] ?? '');
+    return in_array($remote, ['127.0.0.1', '::1'], true) && strpos($uri, '/collector/') !== false;
+}
+
 function isLoggedIn(): bool
 {
+    // Collector dijalankan oleh collector_loop.php melalui localhost tanpa sesi browser.
+    if (isLocalCollectorRequest()) return true;
     if (empty($_SESSION['network_monitor_logged_in'])) return false;
     $last = (int)($_SESSION['network_monitor_last_activity'] ?? 0);
     if ($last > 0 && (time() - $last) > NETWORK_MONITOR_SESSION_TIMEOUT) {
