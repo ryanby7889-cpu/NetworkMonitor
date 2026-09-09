@@ -1,50 +1,63 @@
 <?php
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 
-/**
- * Login sederhana untuk Network Monitor.
- * Ganti nilai di bawah ini untuk mengubah akun login default.
- */
 const NETWORK_MONITOR_USERNAME = 'admin';
 const NETWORK_MONITOR_PASSWORD = 'admin123';
+const NETWORK_MONITOR_SESSION_TIMEOUT = 28800;
 
 function isLoggedIn(): bool
 {
-    return !empty($_SESSION['network_monitor_logged_in']);
+    if (empty($_SESSION['network_monitor_logged_in'])) return false;
+    $last = (int)($_SESSION['network_monitor_last_activity'] ?? 0);
+    if ($last > 0 && (time() - $last) > NETWORK_MONITOR_SESSION_TIMEOUT) {
+        logoutUser();
+        return false;
+    }
+    $_SESSION['network_monitor_last_activity'] = time();
+    return true;
 }
 
 function requireLogin(): void
 {
-    if (!isLoggedIn()) {
-        header('Location: ../auth/login.php');
+    if (isLoggedIn()) return;
+    $uri = (string)($_SERVER['REQUEST_URI'] ?? '');
+    if (strpos($uri, '/api/') !== false) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success'=>false,'authenticated'=>false,'message'=>'Sesi login diperlukan.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
+    header('Location: ../auth/login.php');
+    exit;
 }
 
 function loginUser(string $username, string $password): bool
 {
-    if (hash_equals(NETWORK_MONITOR_USERNAME, trim($username)) && hash_equals(NETWORK_MONITOR_PASSWORD, $password)) {
-        session_regenerate_id(true);
-        $_SESSION['network_monitor_logged_in'] = true;
-        $_SESSION['network_monitor_username'] = NETWORK_MONITOR_USERNAME;
-        $_SESSION['network_monitor_login_at'] = date('Y-m-d H:i:s');
-        return true;
-    }
-
-    return false;
+    if (!hash_equals(NETWORK_MONITOR_USERNAME, trim($username)) || !hash_equals(NETWORK_MONITOR_PASSWORD, $password)) return false;
+    session_regenerate_id(true);
+    $_SESSION['network_monitor_logged_in'] = true;
+    $_SESSION['network_monitor_username'] = NETWORK_MONITOR_USERNAME;
+    $_SESSION['network_monitor_login_at'] = date('Y-m-d H:i:s');
+    $_SESSION['network_monitor_last_activity'] = time();
+    return true;
 }
 
 function logoutUser(): void
 {
     $_SESSION = [];
-
     if (ini_get('session.use_cookies')) {
-        $params = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+        $p = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
     }
-
     session_destroy();
 }
