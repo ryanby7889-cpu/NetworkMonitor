@@ -4,13 +4,21 @@ if(!location.pathname.toLowerCase().includes('/dashboard/'))return;
 function boot(){
  const el=document.getElementById('dashboardCollector');
  const routerStatus=document.getElementById('status');
- function paint(state){
+ let lastGoodState='checking';
+ function paint(state,age){
    if(el){
      const icon='<i class="bi bi-activity"></i>';
      el.classList.remove('healthy','delayed','offline');
-     if(state==='online'){el.classList.add('healthy');el.innerHTML=icon+' Collector: Online';}
-     else if(state==='offline'){el.classList.add('offline');el.innerHTML=icon+' Collector: Offline';}
-     else {el.classList.add('delayed');el.innerHTML=icon+' Collector: Memeriksa...';}
+     if(state==='online'){
+       el.classList.add('healthy');
+       el.innerHTML=icon+' Collector: Healthy'+(age!==null?' • '+age+' dtk lalu':'');
+     } else if(state==='offline'){
+       el.classList.add('offline');
+       el.innerHTML=icon+' Collector: Offline';
+     } else {
+       el.classList.add('delayed');
+       el.innerHTML=icon+' Collector: Memeriksa...';
+     }
    }
  }
  if(routerStatus && /checking\.\.\./i.test(routerStatus.textContent.trim())){
@@ -20,13 +28,29 @@ function boot(){
    try{
      const id=window.selectedRouterId||localStorage.getItem('netmonitor_selected_router')||'';
      const q=id?'&router_id='+encodeURIComponent(id):'';
-     const r=await fetch('../api/traffic.php?nocache='+Date.now()+q,{cache:'no-store'});
+     const r=await fetch('../api/dashboard_history.php?range=10m&nocache='+Date.now()+q,{cache:'no-store',headers:{'X-Requested-With':'XMLHttpRequest'}});
      if(!r.ok)throw Error('HTTP '+r.status);
      const d=await r.json();
      if(!d.success)throw Error(d.message||'API error');
-     const online=String(d.status||'').toLowerCase()==='online';
-     paint(online?'online':'offline');
-   }catch(e){paint('offline');}
+     const collectorStatus=String(d.collector_status||'OFFLINE').toUpperCase();
+     const age=d.collector_age===null||d.collector_age===undefined?null:Math.max(0,Math.round(Number(d.collector_age)));
+     if(collectorStatus==='HEALTHY'){
+       lastGoodState='online';
+       paint('online',age);
+     }else if(collectorStatus==='DELAYED'){
+       lastGoodState='delayed';
+       paint('delayed',age);
+     }else{
+       lastGoodState='offline';
+       paint('offline',age);
+     }
+   }catch(e){
+     // Keep the last known collector state during a temporary API/network delay.
+     if(lastGoodState==='online') return;
+     if(lastGoodState==='delayed') return;
+     paint('offline');
+     console.error('Collector status:',e);
+   }
  }
  paint('checking');
  check();
