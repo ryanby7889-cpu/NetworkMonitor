@@ -1,8 +1,10 @@
 <?php
 
-// Semua endpoint yang memakai database wajib memiliki session login.
+// Halaman/API wajib login; collector CLI tetap diizinkan berjalan otomatis.
 require_once __DIR__ . '/auth.php';
-requireLogin();
+if (PHP_SAPI !== 'cli') {
+    requireLogin();
+}
 
 class Database
 {
