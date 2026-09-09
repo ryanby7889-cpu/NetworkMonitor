@@ -108,5 +108,50 @@
         schedule();
     }
 
-    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 100));
+    // Persist the last good dashboard values so a slow/temporary refresh does not flash 0 Mbps.
+    function preserveLastGoodValues() {
+        if (!window.location.pathname.toLowerCase().includes('/dashboard/')) return;
+        const ids = ['download','upload','cpu','memory','disk','rxPacket','txPacket','peakDownload','peakUpload','routerName','board','architecture','version','uptime','lastUpdate'];
+        const key = 'netmonitor_dashboard_last_good';
+        const read = id => { const el = document.getElementById(id); return el ? el.textContent : ''; };
+        const write = (id, value) => { const el = document.getElementById(id); if (el && value) el.textContent = value; };
+        const isChecking = () => {
+            const status = document.getElementById('status')?.textContent?.trim() || '';
+            const collector = document.getElementById('dashboardCollector')?.textContent?.trim() || '';
+            return /checking|memeriksa/i.test(status + ' ' + collector);
+        };
+        function restore() {
+            if (!isChecking()) return;
+            try {
+                const saved = JSON.parse(localStorage.getItem(key) || 'null');
+                if (!saved || !saved.download || !saved.upload) return;
+                ids.forEach(id => write(id, saved[id]));
+            } catch (_) {}
+        }
+        function save() {
+            const down = read('download');
+            const up = read('upload');
+            if (!down || !up || /^0(?:\.0+)? Mbps$/i.test(down) && /^0(?:\.0+)? Mbps$/i.test(up)) return;
+            try {
+                const data = {}; ids.forEach(id => data[id] = read(id));
+                data.savedAt = Date.now();
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (_) {}
+        }
+        restore();
+        const observer = new MutationObserver(() => { if (isChecking()) restore(); else save(); });
+        ids.forEach(id => { const el = document.getElementById(id); if (el) observer.observe(el, {childList:true,characterData:true,subtree:true}); });
+        const statusEl = document.getElementById('status');
+        const collectorEl = document.getElementById('dashboardCollector');
+        if (statusEl) observer.observe(statusEl, {childList:true,characterData:true,subtree:true});
+        if (collectorEl) observer.observe(collectorEl, {childList:true,characterData:true,subtree:true});
+        setTimeout(restore, 50);
+        setTimeout(restore, 200);
+        setTimeout(restore, 500);
+        setTimeout(restore, 1000);
+        setTimeout(restore, 2000);
+        setTimeout(save, 2500);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(init, 100); setTimeout(preserveLastGoodValues, 120); });
 })();
