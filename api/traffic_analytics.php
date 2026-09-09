@@ -29,7 +29,6 @@ try {
         $params[':interface_name'] = $interface;
     }
 
-    // Full-period summary: no browser-side record limit.
     $summaryStmt = $pdo->prepare("SELECT
         COUNT(*) AS sample_count,
         COALESCE(AVG(download_mbps),0) AS avg_download,
@@ -42,14 +41,12 @@ try {
     $summaryStmt->execute($params);
     $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-    // Exact peak row for the selected period/interface.
     $peakStmt = $pdo->prepare("SELECT download_mbps, upload_mbps, created_at, interface_name
         FROM traffic_history WHERE $where
         ORDER BY download_mbps DESC, created_at DESC LIMIT 1");
     $peakStmt->execute($params);
     $peak = $peakStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-    // Available interfaces for the selected router and period.
     $ifStmt = $pdo->prepare("SELECT DISTINCT interface_name FROM traffic_history
         WHERE created_at BETWEEN :from AND :to
         AND router_id = :router_id
@@ -58,7 +55,6 @@ try {
     $ifStmt->execute([':from' => $from, ':to' => $to, ':router_id' => $routerId]);
     $interfaces = array_values(array_filter(array_map('strval', $ifStmt->fetchAll(PDO::FETCH_COLUMN))));
 
-    // Hourly aggregation for the trend. 24h returns up to 24 points, 7d up to 168 points.
     $trendStmt = $pdo->prepare("SELECT
         DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00') AS bucket,
         COALESCE(AVG(download_mbps),0) AS download_mbps,
@@ -70,7 +66,6 @@ try {
     $trendStmt->execute($params);
     $trend = $trendStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Busy hours are calculated over the entire selected period, not just the first 500 records.
     $hourStmt = $pdo->prepare("SELECT
         HOUR(created_at) AS hour_of_day,
         COALESCE(AVG(download_mbps),0) AS download_mbps,
@@ -83,9 +78,38 @@ try {
     $hourStmt->execute($params);
     $busyHours = $hourStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // V3: interface-level ranking and traffic distribution over the full period.
+    $interfaceStmt = $pdo->prepare("SELECT
+        interface_name,
+        COUNT(*) AS sample_count,
+        COALESCE(AVG(download_mbps),0) AS avg_download,
+        COALESCE(AVG(upload_mbps),0) AS avg_upload,
+        COALESCE(MAX(download_mbps),0) AS peak_download,
+        COALESCE(MAX(upload_mbps),0) AS peak_upload,
+        COALESCE(SUM(download_mbps),0) AS traffic_download,
+        COALESCE(SUM(upload_mbps),0) AS traffic_upload
+        FROM traffic_history WHERE $where
+        AND interface_name IS NOT NULL AND interface_name <> ''
+        GROUP BY interface_name
+        ORDER BY (COALESCE(AVG(download_mbps),0) + COALESCE(AVG(upload_mbps),0)) DESC");
+    $interfaceStmt->execute($params);
+    $interfaceRows = $interfaceStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $totalTraffic = 0.0;
+    foreach ($interfaceRows as $row) {
+        $totalTraffic += (float)$row['traffic_download'] + (float)$row['traffic_upload'];
+    }
+    foreach ($interfaceRows as &$row) {
+        $row['traffic_total'] = (float)$row['traffic_download'] + (float)$row['traffic_upload'];
+        $row['share_percent'] = $totalTraffic > 0 ? ($row['traffic_total'] / $totalTraffic) * 100 : 0;
+    }
+    unset($row);
+
+    $topInterface = $interfaceRows[0] ?? null;
+
     echo json_encode([
         'success' => true,
-        'version' => '2',
+        'version' => '3',
         'router_id' => $routerId,
         'range' => $range,
         'from' => $from,
@@ -93,6 +117,9 @@ try {
         'summary' => $summary,
         'peak' => $peak,
         'interfaces' => $interfaces,
+        'interface_stats' => $interfaceRows,
+        'top_interface' => $topInterface,
+        'traffic_total' => $totalTraffic,
         'trend' => $trend,
         'busy_hours' => $busyHours
     ], JSON_UNESCAPED_UNICODE);
