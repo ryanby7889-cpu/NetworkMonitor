@@ -11,11 +11,15 @@ $routerView = 'traffic_analytics';
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Traffic Analytics - NetMonitor</title>
-    <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="../assets/css/bootstrap-icons.css">
-    <link rel="stylesheet" href="../assets/css/app.css?v=6">
+    <!-- Use the same known-good asset stack as the Router page. -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/variables.css">
+    <link rel="stylesheet" href="../assets/css/common.css">
+    <link rel="stylesheet" href="../assets/css/theme.css?v=1">
     <link rel="stylesheet" href="../assets/css/router_subnav.css?v=2">
-    <link rel="stylesheet" href="../assets/css/router_traffic_analytics.css?v=1">
+    <link rel="stylesheet" href="../assets/css/global_responsive.css?v=1">
+    <link rel="stylesheet" href="../assets/css/router_traffic_analytics.css?v=2">
 </head>
 <body>
 <?php include __DIR__ . '/../includes/sidebar.php'; ?>
@@ -73,7 +77,7 @@ $routerView = 'traffic_analytics';
         <div><h2>Insight Traffic</h2><p id="analyticsInsight">Menunggu data traffic...</p></div>
     </section>
 </main>
-<script src="../assets/js/chart.umd.min.js"></script>
-<script src="../assets/js/router_traffic_analytics.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="../assets/js/router_traffic_analytics.js?v=2"></script>
 </body>
 </html>
